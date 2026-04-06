@@ -2,7 +2,9 @@
 
 import asyncio
 import collections
+import json
 import logging
+import math
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -248,6 +250,66 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Allsky overlay JSON writer
+# ---------------------------------------------------------------------------
+def write_allsky_files(snapshot: SensorSnapshot, cfg: dict) -> None:
+    """Write allskydew.json and allskyfans.json for the Allsky overlay system."""
+    allsky_cfg = cfg.get("allsky", {})
+    if not allsky_cfg.get("enabled", False):
+        return
+
+    output_dir = Path(allsky_cfg.get("output_dir", "/home/pi/allsky/config/overlay/extra"))
+    if not output_dir.exists():
+        log.warning(f"Allsky output dir does not exist: {output_dir}")
+        return
+
+    bme = snapshot.bme280
+    fan_cfg = cfg["fan"]
+
+    # --- allskydew.json ---
+    pressure = bme.pressure if bme.pressure is not None else 0
+    humidity = bme.humidity if bme.humidity is not None else 0
+    altitude = 44330.0 * (1.0 - (pressure / 1013.25) ** (1.0 / 5.255)) if pressure > 0 else 0
+
+    dew_data = {
+        "AS_DEWCONTROLSENSOR": "BME280-I2C",
+        "AS_DEWCONTROLAMBIENT": str(bme.temperature) if bme.temperature is not None else "0",
+        "AS_DEWCONTROLDEW": str(bme.dew_point) if bme.dew_point is not None else "0",
+        "AS_DEWCONTROLHUMIDITY": str(bme.humidity) if bme.humidity is not None else "0",
+        "AS_DEWCONTROLHEATER": "On" if gpio.heater.is_on else "Off",
+        "AS_DEWCONTROLPRESSURE": pressure,
+        "AS_DEWCONTROLRELHUMIDITY": humidity,
+        "AS_DEWCONTROLALTITUDE": altitude,
+    }
+
+    # --- allskyfans.json ---
+    # Fan threshold: highest "on" temp from the curve
+    curve = sorted(fan_cfg.get("curve", []), key=lambda p: p["temp"])
+    fan_threshold = curve[-1]["temp"] if curve else 45
+
+    fan_data = {
+        "OTH_FANS": "On" if gpio.fan.is_on else "Off",
+        "OTH_FANT": fan_threshold,
+        "OTH_USE_PWM": "No",
+        "OTH_PWM_ENABLED": "No",
+        "OTH_PWM_DUTY_CYCLE": 0,
+        "OTH_TEMPERATURE": bme.temperature if bme.temperature is not None else 0,
+    }
+
+    try:
+        dew_path = output_dir / "allskydew.json"
+        dew_path.write_text(json.dumps(dew_data, indent=4) + "\n")
+    except Exception as e:
+        log.warning(f"Failed to write allskydew.json: {e}")
+
+    try:
+        fan_path = output_dir / "allskyfans.json"
+        fan_path.write_text(json.dumps(fan_data, indent=4) + "\n")
+    except Exception as e:
+        log.warning(f"Failed to write allskyfans.json: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Background loop
 # ---------------------------------------------------------------------------
 async def control_loop() -> None:
@@ -271,6 +333,9 @@ async def control_loop() -> None:
 
             # Run control
             apply_control(snapshot, config)
+
+            # Write allsky overlay files
+            write_allsky_files(snapshot, config)
 
         except Exception as e:
             log.error(f"Control loop error: {e}", exc_info=True)

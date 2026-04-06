@@ -39,6 +39,10 @@ DEFAULT_CONFIG = {
         "temp_entity_id": "",
         "humidity_entity_id": "",
     },
+    "allsky": {
+        "enabled": True,
+        "output_dir": "/home/pi/allsky/config/overlay/extra",
+    },
     "i2c_bus": 1,
     "poll_interval": 10,
 }
