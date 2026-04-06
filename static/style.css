@@ -5,7 +5,7 @@
   --card-border: #30363d;
   --text: #e6edf3;
   --text-dim: #8b949e;
-  --accent: #58a6ff;
+  --accent: #3b7cc9;
   --green: #3fb950;
   --red: #f85149;
   --orange: #d29922;
@@ -318,6 +318,18 @@ details[open] summary::before {
   color: var(--orange);
 }
 
+/* Graph Row (dew + fan curve side by side) */
+.graph-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.graph-row .card {
+  min-width: 0; /* prevent canvas overflow */
+}
+
 /* Dew Status */
 .dew-status-layout {
   display: flex;
@@ -407,6 +419,7 @@ details[open] summary::before {
   .card-value { font-size: 1.4rem; }
   .settings-row { flex-direction: column; }
   input[type="text"], input[type="password"] { width: 100%; }
+  .graph-row { grid-template-columns: 1fr; }
   .dew-status-layout { flex-direction: column; }
   .dew-indicators { min-width: unset; }
 }

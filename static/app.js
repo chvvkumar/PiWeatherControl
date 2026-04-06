@@ -205,68 +205,75 @@ function updateDewStatus(sensors, relays, modes) {
   drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn);
 
   // Update indicators
-  // 1. Dew proximity
+  // 1. Enclosure dew gap
   const proxInd = $('#dew-ind-proximity');
   const proxVal = $('#dew-distance-val');
   if (encTemp != null && encDew != null) {
     const dist = encTemp - encDew;
-    proxVal.textContent = `${dist.toFixed(1)}\u00b0C margin`;
     if (dist < dewMargin) {
       proxInd.className = 'dew-indicator danger';
+      proxVal.textContent = `${dist.toFixed(1)}\u00b0C above dew \u2014 risk`;
     } else if (dist < dewMargin + hysteresis) {
       proxInd.className = 'dew-indicator warn';
+      proxVal.textContent = `${dist.toFixed(1)}\u00b0C above dew`;
     } else {
       proxInd.className = 'dew-indicator safe';
+      proxVal.textContent = `${dist.toFixed(1)}\u00b0C above dew`;
     }
   } else {
     proxVal.textContent = '--';
     proxInd.className = 'dew-indicator';
   }
 
-  // 2. Outside dew
+  // 2. Outdoor dew gap
   const outInd = $('#dew-ind-outside');
   const outVal = $('#dew-outside-val');
   if (outdoor.available && outdoor.dew_point != null && encTemp != null) {
     const dist = encTemp - outdoor.dew_point;
-    outVal.textContent = `${dist.toFixed(1)}\u00b0C margin`;
     if (dist < dewMargin) {
       outInd.className = 'dew-indicator danger';
+      outVal.textContent = `${dist.toFixed(1)}\u00b0C above outdoor dew \u2014 risk`;
     } else if (dist < dewMargin + hysteresis) {
       outInd.className = 'dew-indicator warn';
+      outVal.textContent = `${dist.toFixed(1)}\u00b0C above outdoor dew`;
     } else {
       outInd.className = 'dew-indicator safe';
+      outVal.textContent = `${dist.toFixed(1)}\u00b0C above outdoor dew`;
     }
   } else {
     outVal.textContent = outdoor.available ? '--' : 'No HA data';
     outInd.className = 'dew-indicator inactive';
   }
 
-  // 3. Frost risk
+  // 3. Frost
   const frostInd = $('#dew-ind-frost');
   const frostVal = $('#dew-frost-val');
   if (outdoor.available && outdoor.temperature != null) {
-    frostVal.textContent = `${outdoor.temperature.toFixed(1)}\u00b0C outside`;
+    const aboveThresh = outdoor.temperature - frostThreshold;
     if (outdoor.temperature < frostThreshold) {
       frostInd.className = 'dew-indicator danger';
+      frostVal.textContent = `${outdoor.temperature.toFixed(1)}\u00b0C \u2014 below ${frostThreshold}\u00b0C threshold`;
     } else if (outdoor.temperature < frostThreshold + hysteresis) {
       frostInd.className = 'dew-indicator warn';
+      frostVal.textContent = `${outdoor.temperature.toFixed(1)}\u00b0C \u2014 near ${frostThreshold}\u00b0C threshold`;
     } else {
       frostInd.className = 'dew-indicator safe';
+      frostVal.textContent = `${outdoor.temperature.toFixed(1)}\u00b0C \u2014 ${aboveThresh.toFixed(0)}\u00b0C above threshold`;
     }
   } else {
     frostVal.textContent = outdoor.available ? '--' : 'No HA data';
     frostInd.className = 'dew-indicator inactive';
   }
 
-  // 4. Fan suppression
+  // 4. Fan interlock
   const fanInd = $('#dew-ind-fan-suppress');
   const fanVal = $('#dew-fan-suppress-val');
   if (fanOffWhenHeating && heaterOn) {
     fanInd.className = 'dew-indicator active';
-    fanVal.textContent = fanOn ? 'Pending off' : 'Fan held off';
+    fanVal.textContent = fanOn ? 'Waiting to cut fan' : 'Fan held off';
   } else if (fanOffWhenHeating) {
     fanInd.className = 'dew-indicator safe';
-    fanVal.textContent = 'Standby';
+    fanVal.textContent = 'Armed';
   } else {
     fanInd.className = 'dew-indicator inactive';
     fanVal.textContent = 'Disabled';
@@ -701,6 +708,9 @@ function initModeButtons() {
       $$(`[data-device="${device}"]`).forEach(b => {
         b.classList.toggle('active', b.dataset.mode === mode);
       });
+      // Re-fetch status so relay indicators and dew gauge update instantly
+      await fetchStatus();
+      await fetchEvents();
     });
   });
 }

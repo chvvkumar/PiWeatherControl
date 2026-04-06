@@ -176,6 +176,7 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
 
     # --- Heater control (evaluated first — may suppress fan) ---
     heater_mode = cfg["heater"]["mode"]
+    heater_manual = heater_mode in ("on", "off")
     if heater_mode == "on":
         desired_heater = True
         heater_reason = "manual ON"
@@ -195,12 +196,14 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
     if desired_heater != gpio.heater.is_on:
         min_on = cfg["heater"].get("min_on_seconds", 120)
         min_off = cfg["heater"].get("min_off_seconds", 120)
-        if gpio.can_switch(gpio.heater, min_on, min_off):
+        # Manual overrides bypass wear protection
+        if heater_manual or gpio.can_switch(gpio.heater, min_on, min_off):
             gpio.set_heater(desired_heater)
             _log_event(f"Heater {'ON' if desired_heater else 'OFF'}: {heater_reason}")
 
     # --- Fan control ---
     fan_mode = cfg["fan"]["mode"]
+    fan_manual = fan_mode in ("on", "off")
     if fan_mode == "on":
         desired_fan = True
         reason = "manual ON"
@@ -218,14 +221,15 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
     # Suppress fan when heater is active to avoid blowing cold air over heated surfaces
     heater_active = desired_heater or gpio.heater.is_on
     if heater_active and cfg["heater"].get("fan_off_when_heating", True):
-        if desired_fan:
+        if desired_fan and not fan_manual:
             desired_fan = False
             reason = "suppressed: heater active (fan_off_when_heating)"
 
     if desired_fan != gpio.fan.is_on:
         min_on = cfg["fan"].get("min_on_seconds", 120)
         min_off = cfg["fan"].get("min_off_seconds", 120)
-        if gpio.can_switch(gpio.fan, min_on, min_off):
+        # Manual overrides bypass wear protection
+        if fan_manual or gpio.can_switch(gpio.fan, min_on, min_off):
             gpio.set_fan(desired_fan)
             _log_event(f"Fan {'ON' if desired_fan else 'OFF'}: {reason}")
 
@@ -328,6 +332,8 @@ async def post_config(body: ConfigUpdate):
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
     config = update_config(updates)
     _log_event(f"Config updated: {list(updates.keys())}")
+    if latest_snapshot:
+        apply_control(latest_snapshot, config)
     return config
 
 
@@ -343,6 +349,8 @@ async def set_fan_mode(body: ModeUpdate):
     config["fan"]["mode"] = body.mode
     save_config(config)
     _log_event(f"Fan mode set to {body.mode}")
+    if latest_snapshot:
+        apply_control(latest_snapshot, config)
     return {"fan_mode": body.mode}
 
 
@@ -354,6 +362,8 @@ async def set_heater_mode(body: ModeUpdate):
     config["heater"]["mode"] = body.mode
     save_config(config)
     _log_event(f"Heater mode set to {body.mode}")
+    if latest_snapshot:
+        apply_control(latest_snapshot, config)
     return {"heater_mode": body.mode}
 
 

@@ -87,64 +87,64 @@
       </div>
     </section>
 
-    <!-- Dew Status Visualization -->
-    <section class="card wide-card" id="card-dew-status">
-      <div class="card-header">Dew Status</div>
-      <div class="dew-status-layout">
-        <div class="dew-gauge-wrap">
-          <canvas id="dew-gauge" width="600" height="120"></canvas>
-        </div>
-        <div class="dew-indicators">
-          <div class="dew-indicator" id="dew-ind-proximity">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Dew Proximity</span>
-              <span class="dew-ind-value" id="dew-distance-val">--</span>
+    <!-- Dew Status + Fan Curve (side by side) -->
+    <section class="graph-row">
+      <div class="card" id="card-dew-status">
+        <div class="card-header">Dew Status</div>
+        <div class="dew-status-layout">
+          <div class="dew-gauge-wrap">
+            <canvas id="dew-gauge" width="600" height="120"></canvas>
+          </div>
+          <div class="dew-indicators">
+            <div class="dew-indicator" id="dew-ind-proximity">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Enclosure</span>
+                <span class="dew-ind-value" id="dew-distance-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-outside">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Outdoor</span>
+                <span class="dew-ind-value" id="dew-outside-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-frost">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Frost</span>
+                <span class="dew-ind-value" id="dew-frost-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-fan-suppress">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Fan Interlock</span>
+                <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
+              </div>
             </div>
           </div>
-          <div class="dew-indicator" id="dew-ind-outside">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Outside Dew</span>
-              <span class="dew-ind-value" id="dew-outside-val">--</span>
-            </div>
-          </div>
-          <div class="dew-indicator" id="dew-ind-frost">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Frost Risk</span>
-              <span class="dew-ind-value" id="dew-frost-val">--</span>
-            </div>
-          </div>
-          <div class="dew-indicator" id="dew-ind-fan-suppress">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Fan Suppressed</span>
-              <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Fan Curve Editor -->
-    <section class="card wide-card">
-      <div class="card-header">
-        Fan Curve
-        <div class="fan-sources">
-          <label><input type="checkbox" id="src-cpu" checked> CPU</label>
-          <label><input type="checkbox" id="src-ssd" checked> SSD</label>
-          <label><input type="checkbox" id="src-enclosure" checked> Enclosure</label>
         </div>
       </div>
-      <div class="curve-editor-wrap">
-        <canvas id="fan-curve-canvas" width="600" height="200"></canvas>
-        <div class="curve-controls">
-          <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
-          <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>
-          <label>Min OFF: <input type="number" id="fan-min-off" value="120" min="0" max="600" step="10">s</label>
-          <button id="curve-add-btn" class="btn-small">+ Add Point</button>
-          <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
+      <div class="card" id="card-fan-curve">
+        <div class="card-header">
+          Fan Curve
+          <div class="fan-sources">
+            <label><input type="checkbox" id="src-cpu" checked> CPU</label>
+            <label><input type="checkbox" id="src-ssd" checked> SSD</label>
+            <label><input type="checkbox" id="src-enclosure" checked> Enclosure</label>
+          </div>
+        </div>
+        <div class="curve-editor-wrap">
+          <canvas id="fan-curve-canvas" width="600" height="200"></canvas>
+          <div class="curve-controls">
+            <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
+            <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>
+            <label>Min OFF: <input type="number" id="fan-min-off" value="120" min="0" max="600" step="10">s</label>
+            <button id="curve-add-btn" class="btn-small">+ Add Point</button>
+            <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
+          </div>
         </div>
       </div>
     </section>
