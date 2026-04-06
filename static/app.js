@@ -396,33 +396,17 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
 
   ctx.font = '600 10px Inter, sans-serif';
 
+  // Assign each marker its own row, sorted by x position
   function assignRows(markers) {
-    // Sort by x position, then greedily assign rows to avoid overlap
     const sorted = [...markers].sort((a, b) => a.x - b.x);
-    const rows = []; // each row tracks rightmost occupied x
-    for (const m of sorted) {
-      const halfW = ctx.measureText(m.label).width / 2 + 8;
-      let placed = false;
-      for (let r = 0; r < rows.length; r++) {
-        if (m.x - halfW > rows[r]) {
-          m.row = r;
-          rows[r] = m.x + halfW;
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        m.row = rows.length;
-        rows.push(m.x + halfW);
-      }
-    }
+    sorted.forEach((m, i) => { m.row = i; });
   }
 
   assignRows(topMarkers);
   assignRows(botMarkers);
 
   function drawMarker(m, isTop) {
-    const rowOffset = (m.row || 0) * 22;
+    const rowOffset = (m.row || 0) * 28;
     const yPos = isTop ? trackY - 25 - rowOffset : trackY + trackH + 25 + rowOffset;
 
     ctx.strokeStyle = m.color;
