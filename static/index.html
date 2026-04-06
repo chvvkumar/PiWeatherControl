@@ -42,6 +42,8 @@
         <div class="card-sub">
           <span>Humidity: <span id="enc-humidity">--</span>%</span>
           <span>Dew: <span id="enc-dew">--</span>&deg;C</span>
+        </div>
+        <div class="card-sub">
           <span>Pressure: <span id="enc-pressure">--</span> hPa</span>
         </div>
         <canvas id="spark-enclosure" class="sparkline" width="160" height="40"></canvas>
@@ -49,7 +51,7 @@
       <div class="card" id="card-outdoor">
         <div class="card-header">Outside (HA) <span id="ha-status" class="badge">--</span></div>
         <div class="card-value"><span id="out-temp">--</span>&deg;C</div>
-        <div class="card-sub">
+        <div class="card-sub card-sub-lg">
           <span>Humidity: <span id="out-humidity">--</span>%</span>
           <span>Dew: <span id="out-dew">--</span>&deg;C</span>
         </div>
@@ -57,7 +59,7 @@
       <div class="card" id="card-power">
         <div class="card-header">Power (INA260)</div>
         <div class="card-value"><span id="pwr-voltage">--</span> V</div>
-        <div class="card-sub">
+        <div class="card-sub card-sub-lg">
           <span><span id="pwr-current">--</span> A</span>
           <span><span id="pwr-power">--</span> W</span>
         </div>

@@ -89,10 +89,18 @@ header h1 {
 
 .card-sub {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 6px;
   font-size: 0.78rem;
   color: var(--text-dim);
+}
+
+.card-sub-lg {
+  font-size: 1.1rem;
+  gap: 16px;
+  margin-top: 10px;
+  color: var(--text-secondary, #94a3b8);
 }
 
 .sparkline {
