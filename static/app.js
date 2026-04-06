@@ -43,6 +43,7 @@ async function fetchStatus() {
   $('#connection-status').className = 'status-dot connected';
   updateSensors(data.sensors);
   updateRelays(data.relays, data.modes);
+  updateDewStatus(data.sensors, data.relays, data.modes);
 }
 
 async function fetchConfig() {
@@ -182,6 +183,261 @@ function drawSparklines() {
   drawSparkline('#spark-cpu', slice.map(d => d.system?.cpu), '#58a6ff');
   drawSparkline('#spark-ssd', slice.map(d => d.system?.ssd), '#d29922');
   drawSparkline('#spark-enclosure', slice.map(d => d.bme280?.temperature), '#3fb950');
+}
+
+// ── Dew Status Gauge ─────────────────────────────────────────────
+function updateDewStatus(sensors, relays, modes) {
+  if (!sensors) return;
+  const bme = sensors.bme280 || {};
+  const outdoor = sensors.outdoor || {};
+  const heaterCfg = config.heater || {};
+  const dewMargin = heaterCfg.dew_margin ?? 5;
+  const hysteresis = heaterCfg.hysteresis ?? 2;
+  const frostThreshold = heaterCfg.outside_temp_threshold ?? 2;
+  const heaterOn = relays?.heater?.is_on ?? false;
+  const fanOn = relays?.fan?.is_on ?? false;
+  const fanOffWhenHeating = heaterCfg.fan_off_when_heating !== false;
+
+  const encTemp = bme.temperature;
+  const encDew = bme.dew_point;
+
+  // Draw gauge
+  drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn);
+
+  // Update indicators
+  // 1. Dew proximity
+  const proxInd = $('#dew-ind-proximity');
+  const proxVal = $('#dew-distance-val');
+  if (encTemp != null && encDew != null) {
+    const dist = encTemp - encDew;
+    proxVal.textContent = `${dist.toFixed(1)}\u00b0C margin`;
+    if (dist < dewMargin) {
+      proxInd.className = 'dew-indicator danger';
+    } else if (dist < dewMargin + hysteresis) {
+      proxInd.className = 'dew-indicator warn';
+    } else {
+      proxInd.className = 'dew-indicator safe';
+    }
+  } else {
+    proxVal.textContent = '--';
+    proxInd.className = 'dew-indicator';
+  }
+
+  // 2. Outside dew
+  const outInd = $('#dew-ind-outside');
+  const outVal = $('#dew-outside-val');
+  if (outdoor.available && outdoor.dew_point != null && encTemp != null) {
+    const dist = encTemp - outdoor.dew_point;
+    outVal.textContent = `${dist.toFixed(1)}\u00b0C margin`;
+    if (dist < dewMargin) {
+      outInd.className = 'dew-indicator danger';
+    } else if (dist < dewMargin + hysteresis) {
+      outInd.className = 'dew-indicator warn';
+    } else {
+      outInd.className = 'dew-indicator safe';
+    }
+  } else {
+    outVal.textContent = outdoor.available ? '--' : 'No HA data';
+    outInd.className = 'dew-indicator inactive';
+  }
+
+  // 3. Frost risk
+  const frostInd = $('#dew-ind-frost');
+  const frostVal = $('#dew-frost-val');
+  if (outdoor.available && outdoor.temperature != null) {
+    frostVal.textContent = `${outdoor.temperature.toFixed(1)}\u00b0C outside`;
+    if (outdoor.temperature < frostThreshold) {
+      frostInd.className = 'dew-indicator danger';
+    } else if (outdoor.temperature < frostThreshold + hysteresis) {
+      frostInd.className = 'dew-indicator warn';
+    } else {
+      frostInd.className = 'dew-indicator safe';
+    }
+  } else {
+    frostVal.textContent = outdoor.available ? '--' : 'No HA data';
+    frostInd.className = 'dew-indicator inactive';
+  }
+
+  // 4. Fan suppression
+  const fanInd = $('#dew-ind-fan-suppress');
+  const fanVal = $('#dew-fan-suppress-val');
+  if (fanOffWhenHeating && heaterOn) {
+    fanInd.className = 'dew-indicator active';
+    fanVal.textContent = fanOn ? 'Pending off' : 'Fan held off';
+  } else if (fanOffWhenHeating) {
+    fanInd.className = 'dew-indicator safe';
+    fanVal.textContent = 'Standby';
+  } else {
+    fanInd.className = 'dew-indicator inactive';
+    fanVal.textContent = 'Disabled';
+  }
+}
+
+function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn) {
+  const canvas = $('#dew-gauge');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const w = rect.width;
+  const h = rect.height;
+  const pad = { left: 40, right: 20, top: 30, bottom: 24 };
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, w, h);
+
+  if (encTemp == null || encDew == null) {
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Waiting for sensor data...', w / 2, h / 2);
+    return;
+  }
+
+  // Determine temperature range for the gauge
+  const allTemps = [encTemp, encDew, encDew - 5];
+  if (outdoor.available && outdoor.dew_point != null) allTemps.push(outdoor.dew_point);
+  if (outdoor.available && outdoor.temperature != null) allTemps.push(outdoor.temperature);
+  const tMin = Math.floor(Math.min(...allTemps) - 5);
+  const tMax = Math.ceil(Math.max(...allTemps) + 5);
+  const barY = pad.top;
+  const barH = h - pad.top - pad.bottom;
+
+  function tempToX(t) {
+    return pad.left + ((t - tMin) / (tMax - tMin)) * (w - pad.left - pad.right);
+  }
+
+  // Grid lines and labels
+  ctx.strokeStyle = '#21262d';
+  ctx.lineWidth = 1;
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.round((tMax - tMin) / 10));
+  for (let t = Math.ceil(tMin / step) * step; t <= tMax; t += step) {
+    const x = tempToX(t);
+    ctx.beginPath(); ctx.moveTo(x, barY); ctx.lineTo(x, barY + barH); ctx.stroke();
+    ctx.fillText(`${t}\u00b0`, x, h - 6);
+  }
+
+  // Danger zone: dew point to dew point + margin (condensation risk)
+  const dewX = tempToX(encDew);
+  const marginX = tempToX(encDew + dewMargin);
+  const hystX = tempToX(encDew + dewMargin + hysteresis);
+
+  // Condensation zone (below dew point)
+  ctx.fillStyle = 'rgba(248, 81, 73, 0.2)';
+  ctx.fillRect(pad.left, barY, dewX - pad.left, barH);
+
+  // Danger zone (dew to dew+margin)
+  ctx.fillStyle = 'rgba(248, 81, 73, 0.12)';
+  ctx.fillRect(dewX, barY, marginX - dewX, barH);
+
+  // Hysteresis zone (margin to margin+hysteresis)
+  ctx.fillStyle = 'rgba(210, 153, 34, 0.10)';
+  ctx.fillRect(marginX, barY, hystX - marginX, barH);
+
+  // Safe zone
+  ctx.fillStyle = 'rgba(63, 185, 80, 0.06)';
+  ctx.fillRect(hystX, barY, w - pad.right - hystX, barH);
+
+  // Dew point line
+  ctx.strokeStyle = '#f85149';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(dewX, barY); ctx.lineTo(dewX, barY + barH); ctx.stroke();
+
+  // Margin boundary
+  ctx.strokeStyle = '#d29922';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(marginX, barY); ctx.lineTo(marginX, barY + barH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Outside dew point marker
+  if (outdoor.available && outdoor.dew_point != null) {
+    const odX = tempToX(outdoor.dew_point);
+    ctx.strokeStyle = '#a371f7';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(odX, barY); ctx.lineTo(odX, barY + barH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#a371f7';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Out Dew ${outdoor.dew_point.toFixed(1)}\u00b0`, odX, barY - 4);
+  }
+
+  // Frost threshold marker
+  if (outdoor.available && outdoor.temperature != null) {
+    const ftX = tempToX(frostThreshold);
+    ctx.strokeStyle = '#79c0ff';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.beginPath(); ctx.moveTo(ftX, barY); ctx.lineTo(ftX, barY + barH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Labels at top
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#f85149';
+  ctx.fillText(`Dew ${encDew.toFixed(1)}\u00b0`, dewX, barY - 4);
+
+  ctx.fillStyle = '#d29922';
+  ctx.fillText(`Margin`, marginX, barY - 4);
+
+  // Enclosure temperature marker (large, prominent)
+  const encX = tempToX(encTemp);
+  const markerY = barY + barH / 2;
+
+  // Determine marker color based on proximity
+  const dewDist = encTemp - encDew;
+  let markerColor = '#3fb950'; // safe
+  if (dewDist < dewMargin) markerColor = '#f85149'; // danger
+  else if (dewDist < dewMargin + hysteresis) markerColor = '#d29922'; // warn
+
+  // Marker triangle + line
+  ctx.strokeStyle = markerColor;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(encX, barY); ctx.lineTo(encX, barY + barH); ctx.stroke();
+
+  // Diamond marker
+  ctx.fillStyle = markerColor;
+  ctx.beginPath();
+  ctx.moveTo(encX, markerY - 10);
+  ctx.lineTo(encX + 7, markerY);
+  ctx.lineTo(encX, markerY + 10);
+  ctx.lineTo(encX - 7, markerY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#e6edf3';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Enclosure temp label
+  ctx.fillStyle = '#e6edf3';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Enc ${encTemp.toFixed(1)}\u00b0`, encX, barY + barH + 14);
+
+  // Heater status badge
+  if (heaterOn) {
+    ctx.fillStyle = 'rgba(248, 81, 73, 0.9)';
+    const bw = 68, bh = 18, bx = w - pad.right - bw - 4, by = barY + 4;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 4);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('HEATING', bx + bw / 2, by + 13);
+  }
 }
 
 // ── Fan Curve Editor ─────────────────────────────────────────────
@@ -469,6 +725,7 @@ function populateConfigUI(cfg) {
     $('#heater-hysteresis').value = cfg.heater.hysteresis ?? 2;
     $('#heater-min-on').value = cfg.heater.min_on_seconds ?? 120;
     $('#heater-min-off').value = cfg.heater.min_off_seconds ?? 120;
+    $('#fan-off-when-heating').checked = cfg.heater.fan_off_when_heating !== false;
   }
   if (cfg.ha) {
     $('#ha-url').value = cfg.ha.url || '';
@@ -491,6 +748,7 @@ function initSaveButtons() {
           hysteresis: parseFloat($('#heater-hysteresis').value) || 2,
           min_on_seconds: parseInt($('#heater-min-on').value) || 120,
           min_off_seconds: parseInt($('#heater-min-off').value) || 120,
+          fan_off_when_heating: $('#fan-off-when-heating').checked,
         }
       }),
     });
@@ -549,6 +807,7 @@ async function poll() {
     latestStatus = status;
     updateSensors(status.sensors);
     updateRelays(status.relays, status.modes);
+    updateDewStatus(status.sensors, status.relays, status.modes);
     drawFanCurve(); // redraw with current temp markers
   } else {
     $('#connection-status').className = 'status-dot disconnected';
@@ -575,7 +834,11 @@ async function init() {
   initSaveButtons();
 
   // Redraw curve on resize
-  window.addEventListener('resize', () => { drawFanCurve(); drawSparklines(); });
+  window.addEventListener('resize', () => {
+    drawFanCurve();
+    drawSparklines();
+    if (latestStatus) updateDewStatus(latestStatus.sensors, latestStatus.relays, latestStatus.modes);
+  });
 
   // Start polling
   setInterval(poll, POLL_MS);
