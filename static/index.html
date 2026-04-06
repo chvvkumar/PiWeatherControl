@@ -66,43 +66,25 @@
       </div>
     </section>
 
-    <!-- Relay Controls -->
-    <section class="card-grid relay-grid">
-      <div class="card relay-card" id="card-fan">
-        <div class="card-header">
-          <span>Fan Relay</span>
-          <span id="fan-indicator" class="relay-indicator off"></span>
-        </div>
-        <div class="relay-info">
-          <span>GPIO <span id="fan-pin">20</span></span>
-          <span>Cycles: <span id="fan-cycles">0</span></span>
-        </div>
-        <div class="mode-selector">
-          <button class="mode-btn" data-device="fan" data-mode="off">Off</button>
-          <button class="mode-btn active" data-device="fan" data-mode="auto">Auto</button>
-          <button class="mode-btn" data-device="fan" data-mode="on">On</button>
-        </div>
-      </div>
-      <div class="card relay-card" id="card-heater">
-        <div class="card-header">
-          <span>Dew Heater</span>
-          <span id="heater-indicator" class="relay-indicator off"></span>
-        </div>
-        <div class="relay-info">
-          <span>GPIO <span id="heater-pin">21</span></span>
-          <span>Cycles: <span id="heater-cycles">0</span></span>
-        </div>
-        <div class="mode-selector">
-          <button class="mode-btn" data-device="heater" data-mode="off">Off</button>
-          <button class="mode-btn active" data-device="heater" data-mode="auto">Auto</button>
-          <button class="mode-btn" data-device="heater" data-mode="on">On</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Dew Status + Fan Curve (side by side) -->
+    <!-- Dew Status + Fan Curve (with relay controls above) -->
     <section class="graph-row">
-      <div class="glass-panel" id="card-dew-status">
+      <div class="graph-column">
+        <div class="card relay-card" id="card-heater">
+          <div class="card-header">
+            <span>Dew Heater</span>
+            <span id="heater-indicator" class="relay-indicator off"></span>
+          </div>
+          <div class="relay-info">
+            <span>GPIO <span id="heater-pin">21</span></span>
+            <span>Cycles: <span id="heater-cycles">0</span></span>
+          </div>
+          <div class="mode-selector">
+            <button class="mode-btn" data-device="heater" data-mode="off">Off</button>
+            <button class="mode-btn active" data-device="heater" data-mode="auto">Auto</button>
+            <button class="mode-btn" data-device="heater" data-mode="on">On</button>
+          </div>
+        </div>
+        <div class="glass-panel" id="card-dew-status">
         <div class="ambient-glow ambient-glow-red"></div>
         <div class="glass-panel-header">
           <div>
@@ -151,7 +133,24 @@
           </div>
         </div>
       </div>
-      <div class="glass-panel" id="card-fan-curve">
+      </div>
+      <div class="graph-column">
+        <div class="card relay-card" id="card-fan">
+          <div class="card-header">
+            <span>Fan Relay</span>
+            <span id="fan-indicator" class="relay-indicator off"></span>
+          </div>
+          <div class="relay-info">
+            <span>GPIO <span id="fan-pin">20</span></span>
+            <span>Cycles: <span id="fan-cycles">0</span></span>
+          </div>
+          <div class="mode-selector">
+            <button class="mode-btn" data-device="fan" data-mode="off">Off</button>
+            <button class="mode-btn active" data-device="fan" data-mode="auto">Auto</button>
+            <button class="mode-btn" data-device="fan" data-mode="on">On</button>
+          </div>
+        </div>
+        <div class="glass-panel" id="card-fan-curve">
         <div class="ambient-glow ambient-glow-blue"></div>
         <div class="glass-panel-header">
           <div>
@@ -176,6 +175,7 @@
             <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
           </div>
         </div>
+      </div>
       </div>
     </section>
 

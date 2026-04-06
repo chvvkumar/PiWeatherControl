@@ -365,6 +365,17 @@ details[open] summary::before {
   min-width: 0; /* prevent canvas overflow */
 }
 
+.graph-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.graph-column .glass-panel {
+  flex: 1;
+}
+
 /* Glass Panel (Modern Gauge Panels) */
 .glass-panel {
   position: relative;
