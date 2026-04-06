@@ -462,85 +462,82 @@ function drawPiFanCurve(fan, cpuTemp) {
   const canvas = $('#pi-fan-curve');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const w = rect.width;
-  const h = 40;
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  canvas.style.width = w + 'px';
-  canvas.style.height = h + 'px';
+  const cw = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const ch = 40;
+  canvas.width = cw * dpr;
+  canvas.height = ch * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, w, h);
+  ctx.clearRect(0, 0, cw, ch);
 
   const trips = fan.trip_points;
   if (!trips || !trips.length) return;
 
-  const pad = { left: 4, right: 4 };
-  const tempMin = 0;
-  const tempMax = 80;
-  const tToX = t => pad.left + ((t - tempMin) / (tempMax - tempMin)) * (w - pad.left - pad.right);
-  const sToY = s => h - 4 - (s / 255) * (h - 8);
+  // Derive range from trip points: 0 → last trip + margin
+  const lastTrip = trips[trips.length - 1].temp;
+  const tempMax = lastTrip + 15;
+  const pad = { left: 18, right: 8, top: 4, bot: 12 };
+  const plotW = cw - pad.left - pad.right;
+  const plotH = ch - pad.top - pad.bot;
+  const tToX = t => pad.left + (t / tempMax) * plotW;
+  const sToY = s => pad.top + plotH - (s / 255) * plotH;
 
-  // Draw step curve
-  ctx.beginPath();
-  ctx.moveTo(pad.left, sToY(0));
+  // Axis labels at key trip temps
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px Inter, sans-serif';
+  ctx.textAlign = 'center';
   for (const tp of trips) {
-    const x = tToX(tp.temp);
-    ctx.lineTo(x, ctx.canvas.height / dpr); // dummy to get current Y
+    if (tp.temp > 0) {
+      ctx.fillText(`${tp.temp}°`, tToX(tp.temp), ch - 1);
+    }
   }
 
-  // Redraw properly as step function
+  // Step curve path
   ctx.beginPath();
   let prevSpeed = 0;
   ctx.moveTo(pad.left, sToY(prevSpeed));
-  for (let i = 0; i < trips.length; i++) {
-    const tp = trips[i];
+  for (const tp of trips) {
     const x = tToX(tp.temp);
     ctx.lineTo(x, sToY(prevSpeed));
     ctx.lineTo(x, sToY(tp.speed));
     prevSpeed = tp.speed;
   }
-  ctx.lineTo(w - pad.right, sToY(prevSpeed));
+  ctx.lineTo(cw - pad.right, sToY(prevSpeed));
 
-  // Stroke
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // Fill under
-  ctx.lineTo(w - pad.right, h);
-  ctx.lineTo(pad.left, h);
+  // Fill under curve
+  ctx.lineTo(cw - pad.right, sToY(0));
+  ctx.lineTo(pad.left, sToY(0));
   ctx.closePath();
-  ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
   ctx.fill();
 
-  // CPU temp marker
+  // CPU temp marker dot on the curve
   if (cpuTemp != null) {
     const mx = tToX(cpuTemp);
-    // Find current speed at this temp
     let curSpeed = 0;
     for (const tp of trips) {
       if (cpuTemp >= tp.temp) curSpeed = tp.speed;
     }
     const my = sToY(curSpeed);
 
+    // Glowing dot
     ctx.beginPath();
-    ctx.arc(mx, my, 3, 0, Math.PI * 2);
+    ctx.arc(mx, my, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = '#38bdf8';
     ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 8;
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Vertical dashed line
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-    ctx.setLineDash([2, 2]);
+    // White center
     ctx.beginPath();
-    ctx.moveTo(mx, 0);
-    ctx.lineTo(mx, h);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.arc(mx, my, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
   }
 }
 
