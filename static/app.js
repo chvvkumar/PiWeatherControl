@@ -690,13 +690,15 @@ function drawFanCurve(time) {
 
   for (const b of badges) {
     const x = tempToX(b.temp, w, pad.left);
+    const badgeY = pad.top + 10 + (b.row * 24);
+    const lineTop = badgeY + 8;
+    const lineBot = b.temp >= fanThreshold ? yOn : yOff;
+
     ctx.strokeStyle = b.color;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, lineTop); ctx.lineTo(x, lineBot); ctx.stroke();
     ctx.setLineDash([]);
-
-    const badgeY = pad.top + 10 + (b.row * 24);
     const text = `${b.label} ${b.temp.toFixed(0)}\u00b0`;
     ctx.font = 'bold 10px Inter, sans-serif';
     const textW = ctx.measureText(text).width;
