@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Enclosure Controller</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -89,47 +92,65 @@
 
     <!-- Dew Status + Fan Curve (side by side) -->
     <section class="graph-row">
-      <div class="card" id="card-dew-status">
-        <div class="card-header">Dew Status</div>
-        <div class="dew-status-layout">
-          <div class="dew-gauge-wrap">
-            <canvas id="dew-gauge" width="600" height="120"></canvas>
+      <div class="glass-panel" id="card-dew-status">
+        <div class="ambient-glow ambient-glow-red"></div>
+        <div class="glass-panel-header">
+          <div>
+            <h2 class="panel-title">
+              <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+              Dew Point Analysis
+            </h2>
+            <p class="panel-subtitle">Comparing enclosure temperature against dew thresholds</p>
           </div>
-          <div class="dew-indicators">
-            <div class="dew-indicator" id="dew-ind-proximity">
-              <span class="dew-ind-dot"></span>
-              <div class="dew-ind-detail">
-                <span class="dew-ind-label">Enclosure</span>
-                <span class="dew-ind-value" id="dew-distance-val">--</span>
-              </div>
+          <div id="heater-badge" class="heater-badge hidden">
+            <span class="heater-badge-dot"></span>
+            <span class="heater-badge-text">HEATING ACTIVE</span>
+          </div>
+        </div>
+        <div class="dew-gauge-wrap">
+          <canvas id="dew-gauge"></canvas>
+        </div>
+        <div class="dew-indicators">
+          <div class="dew-indicator" id="dew-ind-proximity">
+            <span class="dew-ind-dot"></span>
+            <div class="dew-ind-detail">
+              <span class="dew-ind-label">Enclosure</span>
+              <span class="dew-ind-value" id="dew-distance-val">--</span>
             </div>
-            <div class="dew-indicator" id="dew-ind-outside">
-              <span class="dew-ind-dot"></span>
-              <div class="dew-ind-detail">
-                <span class="dew-ind-label">Outdoor</span>
-                <span class="dew-ind-value" id="dew-outside-val">--</span>
-              </div>
+          </div>
+          <div class="dew-indicator" id="dew-ind-outside">
+            <span class="dew-ind-dot"></span>
+            <div class="dew-ind-detail">
+              <span class="dew-ind-label">Outdoor</span>
+              <span class="dew-ind-value" id="dew-outside-val">--</span>
             </div>
-            <div class="dew-indicator" id="dew-ind-frost">
-              <span class="dew-ind-dot"></span>
-              <div class="dew-ind-detail">
-                <span class="dew-ind-label">Frost</span>
-                <span class="dew-ind-value" id="dew-frost-val">--</span>
-              </div>
+          </div>
+          <div class="dew-indicator" id="dew-ind-frost">
+            <span class="dew-ind-dot"></span>
+            <div class="dew-ind-detail">
+              <span class="dew-ind-label">Frost</span>
+              <span class="dew-ind-value" id="dew-frost-val">--</span>
             </div>
-            <div class="dew-indicator" id="dew-ind-fan-suppress">
-              <span class="dew-ind-dot"></span>
-              <div class="dew-ind-detail">
-                <span class="dew-ind-label">Fan Interlock</span>
-                <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
-              </div>
+          </div>
+          <div class="dew-indicator" id="dew-ind-fan-suppress">
+            <span class="dew-ind-dot"></span>
+            <div class="dew-ind-detail">
+              <span class="dew-ind-label">Fan Interlock</span>
+              <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="card" id="card-fan-curve">
-        <div class="card-header">
-          Fan Curve
+      <div class="glass-panel" id="card-fan-curve">
+        <div class="ambient-glow ambient-glow-blue"></div>
+        <div class="glass-panel-header">
+          <div>
+            <h2 class="panel-title">
+              <svg class="panel-icon icon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+              Thermal Fan Curve
+            </h2>
+            <p class="panel-subtitle">Step-function active cooling thresholds</p>
+          </div>
           <div class="fan-sources">
             <label><input type="checkbox" id="src-cpu" checked> CPU</label>
             <label><input type="checkbox" id="src-ssd" checked> SSD</label>
@@ -137,7 +158,7 @@
           </div>
         </div>
         <div class="curve-editor-wrap">
-          <canvas id="fan-curve-canvas" width="600" height="200"></canvas>
+          <canvas id="fan-curve-canvas"></canvas>
           <div class="curve-controls">
             <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
             <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>

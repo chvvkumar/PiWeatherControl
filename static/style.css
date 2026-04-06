@@ -16,7 +16,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -168,14 +168,17 @@ header h1 {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 #fan-curve-canvas {
+  display: block;
   width: 100%;
-  height: 200px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
+  height: 240px;
   cursor: crosshair;
+  position: relative;
+  z-index: 1;
 }
 
 .curve-controls {
@@ -326,27 +329,131 @@ details[open] summary::before {
   margin-bottom: 16px;
 }
 
-.graph-row .card {
+.graph-row .card,
+.graph-row .glass-panel {
   min-width: 0; /* prevent canvas overflow */
 }
 
-/* Dew Status */
-.dew-status-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Glass Panel (Modern Gauge Panels) */
+.glass-panel {
+  position: relative;
+  overflow: hidden;
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
+.ambient-glow {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  border-radius: 50%;
+  filter: blur(64px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow-red {
+  top: -96px;
+  right: -96px;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.ambient-glow-blue {
+  bottom: -96px;
+  left: -96px;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.glass-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.panel-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.panel-icon {
+  width: 20px;
+  height: 20px;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.panel-icon.icon-cyan {
+  color: #22d3ee;
+}
+
+.panel-subtitle {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 3px;
+}
+
+/* Heater Badge */
+.heater-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 9999px;
+}
+
+.heater-badge.hidden {
+  display: none;
+}
+
+.heater-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.heater-badge-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #f87171;
+  letter-spacing: 0.08em;
+}
+
+/* Dew Status */
 .dew-gauge-wrap {
   width: 100%;
   min-width: 0;
+  height: 130px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
 }
 
 #dew-gauge {
+  display: block;
   width: 100%;
-  height: 140px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
+  height: 100%;
 }
 
 .dew-indicators {
@@ -354,6 +461,8 @@ details[open] summary::before {
   flex-direction: row;
   gap: 8px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .dew-indicator {

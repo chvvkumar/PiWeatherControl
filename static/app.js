@@ -5,6 +5,7 @@ let config = {};
 let curvePoints = []; // [{temp, on}] sorted by temp
 let draggingPoint = null;
 let historyData = [];
+let _dewGaugeParams = null; // set by updateDewStatus, read by animation loop
 
 // ── Helpers ──────────────────────────────────────────────────────
 function $(sel) { return document.querySelector(sel); }
@@ -201,8 +202,8 @@ function updateDewStatus(sensors, relays, modes) {
   const encTemp = bme.temperature;
   const encDew = bme.dew_point;
 
-  // Draw gauge
-  drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn);
+  // Store latest params for animation loop
+  _dewGaugeParams = { encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn };
 
   // Update indicators
   // 1. Enclosure dew gap
@@ -280,10 +281,10 @@ function updateDewStatus(sensors, relays, modes) {
   }
 }
 
-function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn) {
+function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThreshold, heaterOn, time) {
   const canvas = $('#dew-gauge');
   if (!canvas) return;
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
@@ -291,171 +292,172 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
   ctx.scale(dpr, dpr);
   const w = rect.width;
   const h = rect.height;
-  const pad = { left: 40, right: 20, top: 30, bottom: 24 };
+  const pad = { left: 50, right: 50, top: 20, bottom: 40 };
 
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#0d1117';
-  ctx.fillRect(0, 0, w, h);
+
+  // Show/hide heater badge
+  const badge = $('#heater-badge');
+  if (badge) badge.classList.toggle('hidden', !heaterOn);
 
   if (encTemp == null || encDew == null) {
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '13px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Waiting for sensor data...', w / 2, h / 2);
+    ctx.fillText('Waiting for sensor data\u2026', w / 2, h / 2);
     return;
   }
 
-  // Determine temperature range for the gauge
   const allTemps = [encTemp, encDew, encDew - 5];
   if (outdoor.available && outdoor.dew_point != null) allTemps.push(outdoor.dew_point);
   if (outdoor.available && outdoor.temperature != null) allTemps.push(outdoor.temperature);
+  if (frostThreshold != null) allTemps.push(frostThreshold);
   const tMin = Math.floor(Math.min(...allTemps) - 5);
   const tMax = Math.ceil(Math.max(...allTemps) + 5);
-  const barY = pad.top;
-  const barH = h - pad.top - pad.bottom;
 
-  function tempToX(t) {
+  const trackY = pad.top + 30;
+  const trackH = 12;
+
+  function tempToXLocal(t) {
     return pad.left + ((t - tMin) / (tMax - tMin)) * (w - pad.left - pad.right);
   }
 
-  // Grid lines and labels
-  ctx.strokeStyle = '#21262d';
+  // 1. Background ticks
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
   ctx.lineWidth = 1;
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#64748b';
+  ctx.font = '11px Inter, sans-serif';
   ctx.textAlign = 'center';
-  const step = Math.max(1, Math.round((tMax - tMin) / 10));
+  const step = Math.max(1, Math.round((tMax - tMin) / 8));
   for (let t = Math.ceil(tMin / step) * step; t <= tMax; t += step) {
-    const x = tempToX(t);
-    ctx.beginPath(); ctx.moveTo(x, barY); ctx.lineTo(x, barY + barH); ctx.stroke();
-    ctx.fillText(`${t}\u00b0`, x, h - 6);
+    const x = tempToXLocal(t);
+    ctx.beginPath();
+    ctx.moveTo(x, trackY - 15);
+    ctx.lineTo(x, trackY + trackH + 15);
+    ctx.stroke();
+    ctx.fillText(`${t}\u00b0`, x, trackY + trackH + 30);
   }
 
-  // Danger zone: dew point to dew point + margin (condensation risk)
-  const dewX = tempToX(encDew);
-  const marginX = tempToX(encDew + dewMargin);
-  const hystX = tempToX(encDew + dewMargin + hysteresis);
-
-  // Condensation zone (below dew point)
-  ctx.fillStyle = 'rgba(248, 81, 73, 0.2)';
-  ctx.fillRect(pad.left, barY, dewX - pad.left, barH);
-
-  // Danger zone (dew to dew+margin)
-  ctx.fillStyle = 'rgba(248, 81, 73, 0.12)';
-  ctx.fillRect(dewX, barY, marginX - dewX, barH);
-
-  // Hysteresis zone (margin to margin+hysteresis)
-  ctx.fillStyle = 'rgba(210, 153, 34, 0.10)';
-  ctx.fillRect(marginX, barY, hystX - marginX, barH);
-
-  // Safe zone
-  ctx.fillStyle = 'rgba(63, 185, 80, 0.06)';
-  ctx.fillRect(hystX, barY, w - pad.right - hystX, barH);
-
-  // Dew point line
-  ctx.strokeStyle = '#f85149';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(dewX, barY); ctx.lineTo(dewX, barY + barH); ctx.stroke();
-
-  // Margin boundary
-  ctx.strokeStyle = '#d29922';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath(); ctx.moveTo(marginX, barY); ctx.lineTo(marginX, barY + barH); ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Outside dew point marker
-  if (outdoor.available && outdoor.dew_point != null) {
-    const odX = tempToX(outdoor.dew_point);
-    ctx.strokeStyle = '#a371f7';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(odX, barY); ctx.lineTo(odX, barY + barH); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#a371f7';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Out Dew ${outdoor.dew_point.toFixed(1)}\u00b0`, odX, barY - 4);
-  }
-
-  // Frost threshold marker
-  if (outdoor.available && outdoor.temperature != null) {
-    const ftX = tempToX(frostThreshold);
-    ctx.strokeStyle = '#79c0ff';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 4]);
-    ctx.beginPath(); ctx.moveTo(ftX, barY); ctx.lineTo(ftX, barY + barH); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Labels at top
-  ctx.font = 'bold 10px sans-serif';
-  ctx.textAlign = 'center';
-
-  ctx.fillStyle = '#f85149';
-  ctx.fillText(`Dew ${encDew.toFixed(1)}\u00b0`, dewX, barY - 4);
-
-  ctx.fillStyle = '#d29922';
-  ctx.fillText(`Margin`, marginX, barY - 4);
-
-  // Enclosure temperature marker (large, prominent)
-  const encX = tempToX(encTemp);
-  const markerY = barY + barH / 2;
-
-  // Determine marker color based on proximity
-  const dewDist = encTemp - encDew;
-  let markerColor = '#3fb950'; // safe
-  if (dewDist < dewMargin) markerColor = '#f85149'; // danger
-  else if (dewDist < dewMargin + hysteresis) markerColor = '#d29922'; // warn
-
-  // Marker triangle + line
-  ctx.strokeStyle = markerColor;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(encX, barY); ctx.lineTo(encX, barY + barH); ctx.stroke();
-
-  // Diamond marker
-  ctx.fillStyle = markerColor;
+  // 2. Main track background (pill)
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
   ctx.beginPath();
-  ctx.moveTo(encX, markerY - 10);
-  ctx.lineTo(encX + 7, markerY);
-  ctx.lineTo(encX, markerY + 10);
-  ctx.lineTo(encX - 7, markerY);
-  ctx.closePath();
+  ctx.roundRect(pad.left, trackY, w - pad.left - pad.right, trackH, trackH / 2);
   ctx.fill();
-  ctx.strokeStyle = '#e6edf3';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.stroke();
 
-  // Enclosure temp label
-  ctx.fillStyle = '#e6edf3';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`Enc ${encTemp.toFixed(1)}\u00b0`, encX, barY + barH + 14);
+  const dewX = tempToXLocal(encDew);
+  const marginX = tempToXLocal(encDew + dewMargin);
 
-  // Heater status badge
-  if (heaterOn) {
-    ctx.fillStyle = 'rgba(248, 81, 73, 0.9)';
-    const bw = 68, bh = 18, bx = w - pad.right - bw - 4, by = barY + 4;
+  // 3. Colored zones clipped inside the pill track
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(pad.left, trackY, w - pad.left - pad.right, trackH, trackH / 2);
+  ctx.clip();
+
+  // Danger zone (red)
+  ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
+  ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+  ctx.shadowBlur = 10;
+  ctx.fillRect(pad.left, trackY, dewX - pad.left, trackH);
+
+  // Warning zone (amber)
+  ctx.fillStyle = 'rgba(245, 158, 11, 0.8)';
+  ctx.shadowColor = 'rgba(245, 158, 11, 0.8)';
+  ctx.shadowBlur = 10;
+  ctx.fillRect(dewX, trackY, marginX - dewX, trackH);
+
+  // Safe zone (green, subtle)
+  ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+  ctx.shadowBlur = 0;
+  ctx.fillRect(marginX, trackY, w - marginX, trackH);
+
+  ctx.restore();
+
+  // 4. Floating label markers
+  function drawMarker(x, label, color, isTop) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.roundRect(bx, by, bw, bh, 4);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif';
+    ctx.moveTo(x, trackY - (isTop ? 20 : -10));
+    ctx.lineTo(x, trackY + trackH + (isTop ? -10 : 20));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font = '600 10px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('HEATING', bx + bw / 2, by + 13);
+    const yPos = isTop ? trackY - 25 : trackY + trackH + 25;
+
+    // Label pill background
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 5;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    const textWidth = ctx.measureText(label).width;
+    ctx.beginPath();
+    ctx.roundRect(x - textWidth / 2 - 6, yPos - 10, textWidth + 12, 16, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = color;
+    ctx.fillText(label, x, yPos + 2);
   }
+
+  drawMarker(dewX, `Dew ${encDew.toFixed(1)}\u00b0`, '#ef4444', true);
+  drawMarker(marginX, 'Margin', '#f59e0b', true);
+
+  if (outdoor.available && outdoor.dew_point != null) {
+    drawMarker(tempToXLocal(outdoor.dew_point), `Out Dew ${outdoor.dew_point.toFixed(1)}\u00b0`, '#a855f7', false);
+  }
+  if (frostThreshold != null) {
+    drawMarker(tempToXLocal(frostThreshold), `Frost ${frostThreshold}\u00b0`, '#38bdf8', false);
+  }
+
+  // 5. Current enclosure temp — animated glowing dot
+  const encX = tempToXLocal(encTemp);
+  const dewDist = encTemp - encDew;
+  let markerColor = '#22c55e';
+  if (dewDist < dewMargin) markerColor = '#ef4444';
+  else if (dewDist < dewMargin + hysteresis) markerColor = '#f59e0b';
+
+  const animTime = time || performance.now();
+  const pulseSize = Math.sin(animTime * 0.005) * 2;
+
+  ctx.beginPath();
+  ctx.moveTo(encX, trackY - 5);
+  ctx.lineTo(encX, trackY + trackH + 5);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.shadowColor = markerColor;
+  ctx.shadowBlur = 15;
+  ctx.fillStyle = markerColor;
+  ctx.beginPath();
+  ctx.arc(encX, trackY + trackH / 2, 6 + pulseSize, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(encX, trackY + trackH / 2, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main temp label
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 13px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Enc ${encTemp.toFixed(1)}\u00b0`, encX, trackY - 10);
 }
 
 // ── Fan Curve Editor ─────────────────────────────────────────────
-const CURVE_CANVAS_PAD = 30;
 const CURVE_TEMP_MIN = 0;
 const CURVE_TEMP_MAX = 80;
 
-function drawFanCurve() {
+function drawFanCurve(time) {
   const canvas = $('#fan-curve-canvas');
   if (!canvas) return;
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvas.parentElement.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
@@ -463,32 +465,35 @@ function drawFanCurve() {
   ctx.scale(dpr, dpr);
   const w = rect.width;
   const h = rect.height;
-  const pad = CURVE_CANVAS_PAD;
+  const pad = { left: 40, right: 30, top: 20, bottom: 30 };
 
   ctx.clearRect(0, 0, w, h);
 
-  // Background
-  ctx.fillStyle = '#0d1117';
-  ctx.fillRect(0, 0, w, h);
-
-  // Grid
-  ctx.strokeStyle = '#21262d';
+  // 1. Sleek grid
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
   ctx.lineWidth = 1;
+
   for (let t = 0; t <= 80; t += 10) {
-    const x = tempToX(t, w, pad);
-    ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '11px sans-serif';
+    const x = tempToX(t, w, pad.left);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${t}°`, x, h - 8);
+    ctx.fillText(`${t}\u00b0`, x, h - pad.bottom + 16);
   }
 
-  // ON/OFF zones
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '11px sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('ON', 4, pad + 14);
-  ctx.fillText('OFF', 4, h - pad - 6);
+  // ON/OFF horizontal lines and labels
+  const yOn = pad.top + 30;
+  const yOff = h - pad.bottom - 30;
+
+  ctx.beginPath(); ctx.moveTo(pad.left, yOn); ctx.lineTo(w - pad.right, yOn); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.left, yOff); ctx.lineTo(w - pad.right, yOff); ctx.stroke();
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.textAlign = 'right';
+  ctx.font = '600 11px Inter, sans-serif';
+  ctx.fillText('ON', pad.left - 10, yOn + 4);
+  ctx.fillText('OFF', pad.left - 10, yOff + 4);
 
   // Hysteresis zone
   const hysteresis = parseFloat($('#fan-hysteresis')?.value) || 3;
@@ -496,99 +501,146 @@ function drawFanCurve() {
   // Sort points by temp
   const sorted = [...curvePoints].sort((a, b) => a.temp - b.temp);
 
-  // Draw curve line
-  if (sorted.length > 0) {
-    ctx.strokeStyle = '#58a6ff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+  // Draw curve
+  const animTime = time || performance.now();
 
-    // Start from left edge
-    const firstY = sorted[0].on ? pad + 20 : h - pad - 20;
-    ctx.moveTo(pad, firstY);
+  if (sorted.length > 0) {
+    // Hysteresis shaded areas
+    for (const p of sorted) {
+      if (p.on) {
+        const x = tempToX(p.temp, w, pad.left);
+        const xH = tempToX(p.temp - hysteresis, w, pad.left);
+        const grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+        grad.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+        grad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(xH, pad.top, x - xH, h - pad.top - pad.bottom);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(xH, pad.top); ctx.lineTo(xH, h - pad.bottom); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Draw step curve path
+    ctx.beginPath();
+    const firstY = sorted[0].on ? yOn : yOff;
+    ctx.moveTo(pad.left, firstY);
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
-      const x = tempToX(p.temp, w, pad);
-      const yOn = pad + 20;
-      const yOff = h - pad - 20;
+      const x = tempToX(p.temp, w, pad.left);
 
-      // Draw step to this point
       if (i === 0) {
         const prevY = !p.on ? yOff : yOn;
         ctx.lineTo(x, prevY);
       }
       ctx.lineTo(x, p.on ? yOn : yOff);
 
-      // Continue to next or edge
       if (i < sorted.length - 1) {
-        ctx.lineTo(tempToX(sorted[i + 1].temp, w, pad), p.on ? yOn : yOff);
+        ctx.lineTo(tempToX(sorted[i + 1].temp, w, pad.left), p.on ? yOn : yOff);
       } else {
-        ctx.lineTo(w - pad, p.on ? yOn : yOff);
+        ctx.lineTo(w - pad.right, p.on ? yOn : yOff);
       }
     }
+
+    // Neon glow stroke
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 12;
     ctx.stroke();
+    ctx.shadowBlur = 0;
 
-    // Draw hysteresis band
+    // Gradient fill under curve
+    ctx.lineTo(w - pad.right, h - pad.bottom);
+    ctx.lineTo(pad.left, h - pad.bottom);
+    ctx.closePath();
+    const fillGrad = ctx.createLinearGradient(0, yOn, 0, h - pad.bottom);
+    fillGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+    fillGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+    ctx.fillStyle = fillGrad;
+    ctx.fill();
+
+    // Glowing orb data points
     for (const p of sorted) {
-      if (p.on) {
-        const x = tempToX(p.temp, w, pad);
-        const xH = tempToX(p.temp - hysteresis, w, pad);
-        ctx.fillStyle = 'rgba(88, 166, 255, 0.1)';
-        ctx.fillRect(xH, pad, x - xH, h - 2 * pad);
-        // Hysteresis line
-        ctx.strokeStyle = '#58a6ff44';
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.moveTo(xH, pad); ctx.lineTo(xH, h - pad); ctx.stroke();
-        ctx.setLineDash([]);
+      const x = tempToX(p.temp, w, pad.left);
+      const y = p.on ? yOn : yOff;
+      const pulse = Math.sin(animTime * 0.006 + p.temp) * 3;
+
+      if (p === draggingPoint) {
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.shadowColor = p.on ? '#38bdf8' : '#94a3b8';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(x, y, 6 + Math.max(0, pulse), 0, Math.PI * 2);
+        ctx.fillStyle = p.on ? '#38bdf8' : '#64748b';
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
-    }
 
-    // Draw draggable points
-    for (const p of sorted) {
-      const x = tempToX(p.temp, w, pad);
-      const y = p.on ? pad + 20 : h - pad - 20;
+      // White center dot
       ctx.beginPath();
-      ctx.arc(x, y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = p === draggingPoint ? '#ffffff' : (p.on ? '#3fb950' : '#f85149');
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
       ctx.fill();
-      ctx.strokeStyle = '#e6edf3';
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
-      // Label
-      ctx.fillStyle = '#e6edf3';
-      ctx.font = '10px sans-serif';
+      // Value label
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '600 10px Inter, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`${p.temp}°`, x, y - 12);
+      ctx.fillText(`${p.temp}\u00b0`, x, y - 16);
     }
   }
 
-  // Draw current temps as vertical markers
-  drawTempMarker(ctx, 'CPU', latestStatus?.sensors?.system?.cpu, w, h, pad, '#58a6ff');
-  drawTempMarker(ctx, 'SSD', latestStatus?.sensors?.system?.ssd, w, h, pad, '#d29922');
-  drawTempMarker(ctx, 'Enc', latestStatus?.sensors?.bme280?.temperature, w, h, pad, '#3fb950');
+  // 3. Live sensor markers as elegant badges
+  function drawSensorBadge(label, temp, color, offsetMultiplier) {
+    if (temp == null) return;
+    const x = tempToX(temp, w, pad.left);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const badgeY = pad.top + (20 * offsetMultiplier);
+    const text = `${label} ${temp.toFixed(0)}\u00b0`;
+    ctx.font = 'bold 10px Inter, sans-serif';
+    const textW = ctx.measureText(text).width;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x - textW / 2 - 6, badgeY - 12, textW + 12, 18, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x, badgeY);
+  }
+
+  drawSensorBadge('CPU', latestStatus?.sensors?.system?.cpu, '#818cf8', 0);
+  drawSensorBadge('SSD', latestStatus?.sensors?.system?.ssd, '#f472b6', 1);
+  drawSensorBadge('Enc', latestStatus?.sensors?.bme280?.temperature, '#34d399', 2);
 }
 
-function drawTempMarker(ctx, label, temp, w, h, pad, color) {
-  if (temp == null) return;
-  const x = tempToX(temp, w, pad);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([2, 3]);
-  ctx.beginPath(); ctx.moveTo(x, pad); ctx.lineTo(x, h - pad); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = color;
-  ctx.font = 'bold 10px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${label} ${temp.toFixed(0)}°`, x, pad - 4);
+function tempToX(temp, w, padLeft) {
+  const padRight = 30;
+  return padLeft + ((temp - CURVE_TEMP_MIN) / (CURVE_TEMP_MAX - CURVE_TEMP_MIN)) * (w - padLeft - padRight);
 }
 
-function tempToX(temp, w, pad) {
-  return pad + ((temp - CURVE_TEMP_MIN) / (CURVE_TEMP_MAX - CURVE_TEMP_MIN)) * (w - 2 * pad);
-}
-
-function xToTemp(x, w, pad) {
-  return CURVE_TEMP_MIN + ((x - pad) / (w - 2 * pad)) * (CURVE_TEMP_MAX - CURVE_TEMP_MIN);
+function xToTemp(x, w, padLeft) {
+  const padRight = 30;
+  return CURVE_TEMP_MIN + ((x - padLeft) / (w - padLeft - padRight)) * (CURVE_TEMP_MAX - CURVE_TEMP_MIN);
 }
 
 // ── Curve interaction ────────────────────────────────────────────
@@ -604,12 +656,15 @@ function initCurveEditor() {
     const my = e.clientY - rect.top;
     const w = rect.width;
     const h = rect.height;
-    const pad = CURVE_CANVAS_PAD;
+    const padLeft = 40;
+    const padTop = 20;
+    const padBottom = 30;
+    const yOn = padTop + 30;
+    const yOff = h - padBottom - 30;
 
-    // Check if clicking near a point
     for (const p of curvePoints) {
-      const px = tempToX(p.temp, w, pad);
-      const py = p.on ? pad + 20 : h - pad - 20;
+      const px = tempToX(p.temp, w, padLeft);
+      const py = p.on ? yOn : yOff;
       if (Math.hypot(mx - px, my - py) < 12) {
         draggingPoint = p;
         return;
@@ -624,11 +679,10 @@ function initCurveEditor() {
     const my = e.clientY - rect.top;
     const w = rect.width;
     const h = rect.height;
-    const pad = CURVE_CANVAS_PAD;
+    const padLeft = 40;
 
-    draggingPoint.temp = Math.round(Math.max(0, Math.min(80, xToTemp(mx, w, pad))));
+    draggingPoint.temp = Math.round(Math.max(0, Math.min(80, xToTemp(mx, w, padLeft))));
     draggingPoint.on = my < h / 2;
-    drawFanCurve();
   });
 
   canvas.addEventListener('mouseup', () => { draggingPoint = null; });
@@ -642,15 +696,18 @@ function initCurveEditor() {
     const my = e.clientY - rect.top;
     const w = rect.width;
     const h = rect.height;
-    const pad = CURVE_CANVAS_PAD;
+    const padLeft = 40;
+    const padTop = 20;
+    const padBottom = 30;
+    const yOn = padTop + 30;
+    const yOff = h - padBottom - 30;
 
     for (let i = 0; i < curvePoints.length; i++) {
       const p = curvePoints[i];
-      const px = tempToX(p.temp, w, pad);
-      const py = p.on ? pad + 20 : h - pad - 20;
+      const px = tempToX(p.temp, w, padLeft);
+      const py = p.on ? yOn : yOff;
       if (Math.hypot(mx - px, my - py) < 12) {
         curvePoints.splice(i, 1);
-        drawFanCurve();
         return;
       }
     }
@@ -727,7 +784,7 @@ function populateConfigUI(cfg) {
       $('#src-ssd').checked = cfg.fan.sources.ssd !== false;
       $('#src-enclosure').checked = cfg.fan.sources.enclosure !== false;
     }
-    drawFanCurve();
+    // Fan curve redrawn by animation loop
   }
   if (cfg.heater) {
     $('#dew-margin').value = cfg.heater.dew_margin ?? 5;
@@ -818,7 +875,7 @@ async function poll() {
     updateSensors(status.sensors);
     updateRelays(status.relays, status.modes);
     updateDewStatus(status.sensors, status.relays, status.modes);
-    drawFanCurve(); // redraw with current temp markers
+    // Fan curve redrawn by animation loop
   } else {
     $('#connection-status').className = 'status-dot disconnected';
   }
@@ -843,12 +900,21 @@ async function init() {
   initModeButtons();
   initSaveButtons();
 
-  // Redraw curve on resize
+  // Redraw sparklines on resize (gauges handled by animation loop)
   window.addEventListener('resize', () => {
-    drawFanCurve();
     drawSparklines();
-    if (latestStatus) updateDewStatus(latestStatus.sensors, latestStatus.relays, latestStatus.modes);
   });
+
+  // Animation loop for smooth pulsing effects on gauges
+  function animate(time) {
+    if (_dewGaugeParams) {
+      const p = _dewGaugeParams;
+      drawDewGauge(p.encTemp, p.encDew, p.outdoor, p.dewMargin, p.hysteresis, p.frostThreshold, p.heaterOn, time);
+    }
+    drawFanCurve(time);
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
 
   // Start polling
   setInterval(poll, POLL_MS);
