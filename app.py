@@ -131,22 +131,21 @@ def evaluate_heater(snapshot: SensorSnapshot, cfg: dict) -> bool:
     bme = snapshot.bme280
     outdoor = snapshot.outdoor
 
-    if bme.temperature is None or bme.dew_point is None:
-        return False  # can't decide without sensor data
-
     enclosure_temp = bme.temperature
     enclosure_dew = bme.dew_point
 
-    # Condition 1: Enclosure temp approaching dew point
-    dew_distance = enclosure_temp - enclosure_dew
-    if current_on:
-        dew_trigger = dew_distance < (dew_margin + hysteresis)
-    else:
-        dew_trigger = dew_distance < dew_margin
+    # Condition 1: Enclosure temp approaching enclosure dew point
+    dew_trigger = False
+    if enclosure_temp is not None and enclosure_dew is not None:
+        dew_distance = enclosure_temp - enclosure_dew
+        if current_on:
+            dew_trigger = dew_distance < (dew_margin + hysteresis)
+        else:
+            dew_trigger = dew_distance < dew_margin
 
-    # Condition 2: Outside dew point (from HA) close to enclosure temp
+    # Condition 2: Enclosure temp approaching HA outdoor dew point
     outside_dew_trigger = False
-    if outdoor.available and outdoor.dew_point is not None:
+    if enclosure_temp is not None and outdoor.available and outdoor.dew_point is not None:
         outside_dew_distance = enclosure_temp - outdoor.dew_point
         if current_on:
             outside_dew_trigger = outside_dew_distance < (dew_margin + hysteresis)
