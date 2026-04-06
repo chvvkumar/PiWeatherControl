@@ -124,6 +124,13 @@ function updateSensors(s) {
     $('#pwr-current').textContent = p.current != null ? p.current.toFixed(3) : '--';
     $('#pwr-power').textContent = p.power != null ? p.power.toFixed(1) : '--';
   }
+
+  if (s.pi_fan) {
+    const pf = s.pi_fan;
+    $('#pi-fan-rpm').textContent = pf.rpm != null ? pf.rpm : '--';
+    $('#pi-fan-pct').textContent = pf.speed_pct != null ? Math.round(pf.speed_pct) : '--';
+    drawPiFanCurve(s.pi_fan, s.system?.cpu);
+  }
 }
 
 // ── Relay display ────────────────────────────────────────────────
@@ -448,6 +455,93 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
   ctx.font = 'bold 13px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`Enc ${encTemp.toFixed(1)}\u00b0`, encX, trackY - 10);
+}
+
+// ── Pi Fan Curve (mini card graph) ──────────────────────────────
+function drawPiFanCurve(fan, cpuTemp) {
+  const canvas = $('#pi-fan-curve');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = rect.width;
+  const h = 40;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const trips = fan.trip_points;
+  if (!trips || !trips.length) return;
+
+  const pad = { left: 4, right: 4 };
+  const tempMin = 0;
+  const tempMax = 80;
+  const tToX = t => pad.left + ((t - tempMin) / (tempMax - tempMin)) * (w - pad.left - pad.right);
+  const sToY = s => h - 4 - (s / 255) * (h - 8);
+
+  // Draw step curve
+  ctx.beginPath();
+  ctx.moveTo(pad.left, sToY(0));
+  for (const tp of trips) {
+    const x = tToX(tp.temp);
+    ctx.lineTo(x, ctx.canvas.height / dpr); // dummy to get current Y
+  }
+
+  // Redraw properly as step function
+  ctx.beginPath();
+  let prevSpeed = 0;
+  ctx.moveTo(pad.left, sToY(prevSpeed));
+  for (let i = 0; i < trips.length; i++) {
+    const tp = trips[i];
+    const x = tToX(tp.temp);
+    ctx.lineTo(x, sToY(prevSpeed));
+    ctx.lineTo(x, sToY(tp.speed));
+    prevSpeed = tp.speed;
+  }
+  ctx.lineTo(w - pad.right, sToY(prevSpeed));
+
+  // Stroke
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Fill under
+  ctx.lineTo(w - pad.right, h);
+  ctx.lineTo(pad.left, h);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+  ctx.fill();
+
+  // CPU temp marker
+  if (cpuTemp != null) {
+    const mx = tToX(cpuTemp);
+    // Find current speed at this temp
+    let curSpeed = 0;
+    for (const tp of trips) {
+      if (cpuTemp >= tp.temp) curSpeed = tp.speed;
+    }
+    const my = sToY(curSpeed);
+
+    ctx.beginPath();
+    ctx.arc(mx, my, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#38bdf8';
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Vertical dashed line
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    ctx.moveTo(mx, 0);
+    ctx.lineTo(mx, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 // ── Fan Curve Editor ─────────────────────────────────────────────

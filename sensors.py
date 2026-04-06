@@ -59,6 +59,15 @@ class SystemTemps:
 
 
 @dataclass
+class PiFanReading:
+    rpm: Optional[int] = None             # fan RPM
+    pwm: Optional[int] = None            # 0-255 duty cycle
+    speed_pct: Optional[float] = None     # 0-100%
+    trip_points: Optional[list] = None    # [{temp, speed}] from sysfs
+    error: Optional[str] = None
+
+
+@dataclass
 class HAOutdoor:
     temperature: Optional[float] = None   # °C
     humidity: Optional[float] = None      # %RH
@@ -74,6 +83,7 @@ class SensorSnapshot:
     ina260: INA260Reading = field(default_factory=INA260Reading)
     system: SystemTemps = field(default_factory=SystemTemps)
     outdoor: HAOutdoor = field(default_factory=HAOutdoor)
+    pi_fan: PiFanReading = field(default_factory=PiFanReading)
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -201,6 +211,98 @@ def read_system_temps() -> SystemTemps:
     return SystemTemps(cpu=cpu, ssd=ssd)
 
 
+def _find_pwmfan_hwmon() -> Optional[str]:
+    """Find the hwmon path for the Pi 5 PWM fan."""
+    for path in glob.glob("/sys/class/hwmon/hwmon*/name"):
+        try:
+            with open(path) as f:
+                if f.read().strip() == "pwmfan":
+                    return str(path).rsplit("/", 1)[0]
+        except IOError:
+            continue
+    return None
+
+
+def read_pi_fan() -> PiFanReading:
+    """Read Raspberry Pi 5 built-in fan speed and configured trip points."""
+    hwmon = _find_pwmfan_hwmon()
+    if hwmon is None:
+        # Mock data for development on non-Pi platforms
+        cpu_mock = 38.0 + 5.0 * math.sin(time.time() / 90)
+        pwm = 100 if cpu_mock < 40 else 150 if cpu_mock < 50 else 200 if cpu_mock < 65 else 255
+        return PiFanReading(
+            rpm=int(1000 + pwm * 4),
+            pwm=pwm,
+            speed_pct=round(pwm / 255.0 * 100, 0),
+            trip_points=[
+                {"temp": 0, "speed": 100},
+                {"temp": 40, "speed": 150},
+                {"temp": 50, "speed": 200},
+                {"temp": 65, "speed": 255},
+            ],
+        )
+
+    try:
+        rpm = None
+        pwm = None
+        rpm_path = f"{hwmon}/fan1_input"
+        pwm_path = f"{hwmon}/pwm1"
+
+        try:
+            with open(rpm_path) as f:
+                rpm = int(f.read().strip())
+        except (IOError, ValueError):
+            pass
+        try:
+            with open(pwm_path) as f:
+                pwm = int(f.read().strip())
+        except (IOError, ValueError):
+            pass
+
+        # Read trip points from thermal zone
+        trip_points = []
+        tz = "/sys/class/thermal/thermal_zone0"
+        i = 0
+        while True:
+            temp_path = f"{tz}/trip_point_{i}_temp"
+            type_path = f"{tz}/trip_point_{i}_type"
+            try:
+                with open(type_path) as f:
+                    tp_type = f.read().strip()
+                with open(temp_path) as f:
+                    tp_temp = int(f.read().strip()) // 1000
+                if tp_type == "active":
+                    trip_points.append({"temp": tp_temp, "speed": 0})
+                i += 1
+            except (FileNotFoundError, IOError, ValueError):
+                break
+
+        # Map trip points to cooling levels from device tree
+        try:
+            dt_path = "/sys/firmware/devicetree/base/cooling_fan/cooling-levels"
+            with open(dt_path, "rb") as f:
+                data = f.read()
+            levels = [int.from_bytes(data[j:j+4], "big") for j in range(0, len(data), 4)]
+            # levels[0] = state 0 (off), levels[1] = state 1 (trip 0), etc.
+            for idx, tp in enumerate(trip_points):
+                if idx + 1 < len(levels):
+                    tp["speed"] = levels[idx + 1]
+        except (IOError, ValueError):
+            pass
+
+        speed_pct = round(pwm / 255.0 * 100, 0) if pwm is not None else None
+
+        return PiFanReading(
+            rpm=rpm,
+            pwm=pwm,
+            speed_pct=speed_pct,
+            trip_points=trip_points if trip_points else None,
+        )
+    except Exception as e:
+        log.warning(f"Pi fan read error: {e}")
+        return PiFanReading(error=str(e))
+
+
 async def read_ha_outdoor(config: dict) -> HAOutdoor:
     """Fetch outside temp and humidity from Home Assistant REST API."""
     ha = config.get("ha", {})
@@ -269,6 +371,7 @@ async def read_all_sensors(config: dict) -> SensorSnapshot:
     bme = read_bme280()
     ina = read_ina260()
     sys_temps = read_system_temps()
+    pi_fan = read_pi_fan()
     outdoor = await read_ha_outdoor(config)
 
     return SensorSnapshot(
@@ -277,4 +380,5 @@ async def read_all_sensors(config: dict) -> SensorSnapshot:
         ina260=ina,
         system=sys_temps,
         outdoor=outdoor,
+        pi_fan=pi_fan,
     )
