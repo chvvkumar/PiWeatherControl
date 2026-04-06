@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enclosure Controller</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Enclosure Controller</h1>
+    <span id="connection-status" class="status-dot connected" title="Connected"></span>
+  </header>
+
+  <main>
+    <!-- Sensor Cards Row -->
+    <section class="card-grid">
+      <div class="card" id="card-cpu">
+        <div class="card-header">CPU</div>
+        <div class="card-value"><span id="cpu-temp">--</span>&deg;C</div>
+        <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
+      </div>
+      <div class="card" id="card-ssd">
+        <div class="card-header">SSD</div>
+        <div class="card-value"><span id="ssd-temp">--</span>&deg;C</div>
+        <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
+      </div>
+      <div class="card" id="card-enclosure">
+        <div class="card-header">Enclosure (BME280)</div>
+        <div class="card-value"><span id="enc-temp">--</span>&deg;C</div>
+        <div class="card-sub">
+          <span>Humidity: <span id="enc-humidity">--</span>%</span>
+          <span>Dew: <span id="enc-dew">--</span>&deg;C</span>
+          <span>Pressure: <span id="enc-pressure">--</span> hPa</span>
+        </div>
+        <canvas id="spark-enclosure" class="sparkline" width="160" height="40"></canvas>
+      </div>
+      <div class="card" id="card-outdoor">
+        <div class="card-header">Outside (HA) <span id="ha-status" class="badge">--</span></div>
+        <div class="card-value"><span id="out-temp">--</span>&deg;C</div>
+        <div class="card-sub">
+          <span>Humidity: <span id="out-humidity">--</span>%</span>
+          <span>Dew: <span id="out-dew">--</span>&deg;C</span>
+        </div>
+      </div>
+      <div class="card" id="card-power">
+        <div class="card-header">Power (INA260)</div>
+        <div class="card-value"><span id="pwr-voltage">--</span> V</div>
+        <div class="card-sub">
+          <span><span id="pwr-current">--</span> A</span>
+          <span><span id="pwr-power">--</span> W</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Relay Controls -->
+    <section class="card-grid relay-grid">
+      <div class="card relay-card" id="card-fan">
+        <div class="card-header">
+          <span>Fan Relay</span>
+          <span id="fan-indicator" class="relay-indicator off"></span>
+        </div>
+        <div class="relay-info">
+          <span>GPIO <span id="fan-pin">20</span></span>
+          <span>Cycles: <span id="fan-cycles">0</span></span>
+        </div>
+        <div class="mode-selector">
+          <button class="mode-btn" data-device="fan" data-mode="off">Off</button>
+          <button class="mode-btn active" data-device="fan" data-mode="auto">Auto</button>
+          <button class="mode-btn" data-device="fan" data-mode="on">On</button>
+        </div>
+      </div>
+      <div class="card relay-card" id="card-heater">
+        <div class="card-header">
+          <span>Dew Heater</span>
+          <span id="heater-indicator" class="relay-indicator off"></span>
+        </div>
+        <div class="relay-info">
+          <span>GPIO <span id="heater-pin">21</span></span>
+          <span>Cycles: <span id="heater-cycles">0</span></span>
+        </div>
+        <div class="mode-selector">
+          <button class="mode-btn" data-device="heater" data-mode="off">Off</button>
+          <button class="mode-btn active" data-device="heater" data-mode="auto">Auto</button>
+          <button class="mode-btn" data-device="heater" data-mode="on">On</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fan Curve Editor -->
+    <section class="card wide-card">
+      <div class="card-header">
+        Fan Curve
+        <div class="fan-sources">
+          <label><input type="checkbox" id="src-cpu" checked> CPU</label>
+          <label><input type="checkbox" id="src-ssd" checked> SSD</label>
+          <label><input type="checkbox" id="src-enclosure" checked> Enclosure</label>
+        </div>
+      </div>
+      <div class="curve-editor-wrap">
+        <canvas id="fan-curve-canvas" width="600" height="200"></canvas>
+        <div class="curve-controls">
+          <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
+          <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>
+          <label>Min OFF: <input type="number" id="fan-min-off" value="120" min="0" max="600" step="10">s</label>
+          <button id="curve-add-btn" class="btn-small">+ Add Point</button>
+          <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dew Heater Settings -->
+    <section class="card wide-card">
+      <div class="card-header">Dew Heater Settings</div>
+      <div class="settings-row">
+        <label>Dew Margin: <input type="number" id="dew-margin" value="5" min="0" max="20" step="0.5">&deg;C</label>
+        <label>Frost Threshold: <input type="number" id="outside-threshold" value="2" min="-20" max="20" step="0.5">&deg;C</label>
+        <label>Hysteresis: <input type="number" id="heater-hysteresis" value="2" min="0" max="10" step="0.5">&deg;C</label>
+        <label>Min ON: <input type="number" id="heater-min-on" value="120" min="0" max="600" step="10">s</label>
+        <label>Min OFF: <input type="number" id="heater-min-off" value="120" min="0" max="600" step="10">s</label>
+        <button id="heater-save-btn" class="btn-small btn-primary">Save</button>
+      </div>
+    </section>
+
+    <!-- HA Settings (collapsible) -->
+    <details class="card wide-card">
+      <summary class="card-header">Home Assistant Settings</summary>
+      <div class="settings-row">
+        <label>URL: <input type="text" id="ha-url" placeholder="http://homeassistant.local:8123"></label>
+        <label>Token: <input type="password" id="ha-token" placeholder="Long-lived access token"></label>
+        <label>Temp Entity: <input type="text" id="ha-temp-entity" placeholder="sensor.outside_temperature"></label>
+        <label>Humidity Entity: <input type="text" id="ha-humid-entity" placeholder="sensor.outside_humidity"></label>
+        <button id="ha-save-btn" class="btn-small btn-primary">Save</button>
+        <button id="ha-test-btn" class="btn-small">Test</button>
+      </div>
+    </details>
+
+    <!-- Event Log -->
+    <section class="card wide-card">
+      <div class="card-header">Event Log</div>
+      <div id="event-log" class="event-log"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

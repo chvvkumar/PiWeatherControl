@@ -1,0 +1,332 @@
+/* Enclosure Controller — Dark Theme */
+:root {
+  --bg: #0d1117;
+  --card-bg: #161b22;
+  --card-border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --red: #f85149;
+  --orange: #d29922;
+  --blue: #58a6ff;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 16px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+header h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-dot.connected { background: var(--green); }
+.status-dot.disconnected { background: var(--red); }
+
+/* Card Grid */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.relay-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.wide-card {
+  margin-bottom: 16px;
+}
+
+.card-header {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-sub {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.sparkline {
+  margin-top: 8px;
+  width: 100%;
+  height: 40px;
+  display: block;
+}
+
+/* Badges */
+.badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--card-border);
+  color: var(--text-dim);
+}
+.badge.ok { background: rgba(63, 185, 80, 0.2); color: var(--green); }
+.badge.err { background: rgba(248, 81, 73, 0.2); color: var(--red); }
+
+/* Relay Cards */
+.relay-card .card-header {
+  font-size: 0.9rem;
+  text-transform: none;
+  color: var(--text);
+}
+
+.relay-indicator {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.relay-indicator.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.relay-indicator.off { background: #484f58; }
+
+.relay-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 8px 0;
+}
+
+.mode-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #0d1117;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Fan Curve Editor */
+.curve-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#fan-curve-canvas {
+  width: 100%;
+  height: 200px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  cursor: crosshair;
+}
+
+.curve-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.fan-sources {
+  display: flex;
+  gap: 10px;
+  font-size: 0.75rem;
+}
+
+.fan-sources label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+/* Settings */
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  padding: 8px 0;
+}
+
+.settings-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+input[type="number"],
+input[type="text"],
+input[type="password"] {
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  width: 120px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 260px;
+}
+
+input[type="number"]:focus,
+input[type="text"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* Buttons */
+.btn-small {
+  padding: 6px 14px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+
+.btn-small:hover {
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0d1117;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Details / collapsible */
+details summary {
+  cursor: pointer;
+  list-style: none;
+}
+details summary::before {
+  content: "\25B6 ";
+  font-size: 0.7rem;
+}
+details[open] summary::before {
+  content: "\25BC ";
+}
+
+/* Event Log */
+.event-log {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.event-log .entry {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+}
+
+.event-log .entry .time {
+  color: var(--text-dim);
+  margin-right: 8px;
+}
+
+.event-log .entry.fan-on,
+.event-log .entry.heater-on {
+  color: var(--green);
+}
+
+.event-log .entry.fan-off,
+.event-log .entry.heater-off {
+  color: var(--text-dim);
+}
+
+.event-log .entry.warning {
+  color: var(--orange);
+}
+
+/* Temp color coding on cards */
+.temp-cool { color: var(--blue); }
+.temp-warm { color: var(--orange); }
+.temp-hot { color: var(--red); }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .card-grid { grid-template-columns: 1fr 1fr; }
+  .card-value { font-size: 1.4rem; }
+  .settings-row { flex-direction: column; }
+  input[type="text"], input[type="password"] { width: 100%; }
+}
