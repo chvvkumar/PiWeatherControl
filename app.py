@@ -104,18 +104,32 @@ def evaluate_fan(smoothed: dict, cfg: dict) -> bool:
     hysteresis = fan_cfg.get("hysteresis", 3)
     current_on = gpio.fan.is_on
 
-    # Find the highest curve breakpoint that the temperature exceeds
-    should_on = False
+    # Walk the sorted curve to find which step the temperature falls in.
+    # Each point defines a transition: {temp: T, on: True/False}.
+    # Before the first point, the state is the opposite of the first point's "on".
+    # Apply hysteresis at ON→OFF edges so the fan doesn't cycle rapidly.
+    should_on = not curve[0].get("on", True)
     for point in curve:
         threshold = point["temp"]
-        if current_on:
-            # Already on — need to drop below threshold - hysteresis to turn off
-            if hottest >= (threshold - hysteresis):
-                should_on = True
-        else:
-            # Currently off — need to exceed threshold to turn on
+        target = point.get("on", True)
+        if target and not current_on:
+            # Turning on: require reaching the threshold
             if hottest >= threshold:
                 should_on = True
+        elif target and current_on:
+            # Already on at an ON step: stay on with hysteresis
+            if hottest >= (threshold - hysteresis):
+                should_on = True
+        elif not target and current_on:
+            # Turning off: only turn off if below threshold - hysteresis
+            if hottest >= (threshold - hysteresis):
+                should_on = True
+            else:
+                should_on = False
+        else:
+            # Already off at an OFF step
+            if hottest >= threshold:
+                should_on = False
 
     return should_on
 
