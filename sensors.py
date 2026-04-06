@@ -228,7 +228,12 @@ async def read_ha_outdoor(config: dict) -> HAOutdoor:
                 data = resp.json()
                 state = data.get("state")
                 if state not in ("unknown", "unavailable"):
-                    temp = round(float(state), 1)
+                    temp = float(state)
+                    # Convert to Celsius if HA reports in Fahrenheit
+                    unit = data.get("attributes", {}).get("unit_of_measurement", "")
+                    if unit in ("°F", "\u00b0F"):
+                        temp = (temp - 32) * 5.0 / 9.0
+                    temp = round(temp, 1)
 
             # Fetch humidity if entity configured
             if humid_eid:

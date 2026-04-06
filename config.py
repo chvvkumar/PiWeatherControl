@@ -26,6 +26,7 @@ DEFAULT_CONFIG = {
         "hysteresis": 2,
         "min_on_seconds": 120,
         "min_off_seconds": 120,
+        "fan_off_when_heating": True,
     },
     "gpio": {
         "fan_pin": 20,

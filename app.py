@@ -174,6 +174,31 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
 
     watchdog_tripped = (time.time() - _last_good_read) > _WATCHDOG_TIMEOUT
 
+    # --- Heater control (evaluated first — may suppress fan) ---
+    heater_mode = cfg["heater"]["mode"]
+    if heater_mode == "on":
+        desired_heater = True
+        heater_reason = "manual ON"
+    elif heater_mode == "off":
+        desired_heater = False
+        heater_reason = "manual OFF"
+    elif watchdog_tripped:
+        desired_heater = False
+        heater_reason = "WATCHDOG: sensors stale >5min, forcing heater OFF for safety"
+    else:
+        desired_heater = evaluate_heater(snapshot, cfg)
+        dew_dist = None
+        if snapshot.bme280.temperature and snapshot.bme280.dew_point:
+            dew_dist = round(snapshot.bme280.temperature - snapshot.bme280.dew_point, 1)
+        heater_reason = f"auto (dew_distance={dew_dist}, outdoor={snapshot.outdoor.temperature})"
+
+    if desired_heater != gpio.heater.is_on:
+        min_on = cfg["heater"].get("min_on_seconds", 120)
+        min_off = cfg["heater"].get("min_off_seconds", 120)
+        if gpio.can_switch(gpio.heater, min_on, min_off):
+            gpio.set_heater(desired_heater)
+            _log_event(f"Heater {'ON' if desired_heater else 'OFF'}: {heater_reason}")
+
     # --- Fan control ---
     fan_mode = cfg["fan"]["mode"]
     if fan_mode == "on":
@@ -190,37 +215,19 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
         desired_fan = evaluate_fan(smoothed, cfg)
         reason = f"auto (hottest: CPU={smoothed['cpu']}, SSD={smoothed['ssd']}, Enc={smoothed['enclosure']})"
 
+    # Suppress fan when heater is active to avoid blowing cold air over heated surfaces
+    heater_active = desired_heater or gpio.heater.is_on
+    if heater_active and cfg["heater"].get("fan_off_when_heating", True):
+        if desired_fan:
+            desired_fan = False
+            reason = "suppressed: heater active (fan_off_when_heating)"
+
     if desired_fan != gpio.fan.is_on:
         min_on = cfg["fan"].get("min_on_seconds", 120)
         min_off = cfg["fan"].get("min_off_seconds", 120)
         if gpio.can_switch(gpio.fan, min_on, min_off):
             gpio.set_fan(desired_fan)
             _log_event(f"Fan {'ON' if desired_fan else 'OFF'}: {reason}")
-
-    # --- Heater control ---
-    heater_mode = cfg["heater"]["mode"]
-    if heater_mode == "on":
-        desired_heater = True
-        reason = "manual ON"
-    elif heater_mode == "off":
-        desired_heater = False
-        reason = "manual OFF"
-    elif watchdog_tripped:
-        desired_heater = False
-        reason = "WATCHDOG: sensors stale >5min, forcing heater OFF for safety"
-    else:
-        desired_heater = evaluate_heater(snapshot, cfg)
-        dew_dist = None
-        if snapshot.bme280.temperature and snapshot.bme280.dew_point:
-            dew_dist = round(snapshot.bme280.temperature - snapshot.bme280.dew_point, 1)
-        reason = f"auto (dew_distance={dew_dist}, outdoor={snapshot.outdoor.temperature})"
-
-    if desired_heater != gpio.heater.is_on:
-        min_on = cfg["heater"].get("min_on_seconds", 120)
-        min_off = cfg["heater"].get("min_off_seconds", 120)
-        if gpio.can_switch(gpio.heater, min_on, min_off):
-            gpio.set_heater(desired_heater)
-            _log_event(f"Heater {'ON' if desired_heater else 'OFF'}: {reason}")
 
 
 # ---------------------------------------------------------------------------
