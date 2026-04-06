@@ -381,44 +381,77 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
 
   ctx.restore();
 
-  // 4. Floating label markers
-  function drawMarker(x, label, color, isTop) {
-    ctx.strokeStyle = color;
+  // 4. Floating label markers — staggered to avoid overlap
+  const topMarkers = [
+    { x: dewX, label: `Dew ${encDew.toFixed(1)}\u00b0`, color: '#ef4444' },
+    { x: marginX, label: 'Margin', color: '#f59e0b' },
+  ];
+  const botMarkers = [];
+  if (outdoor.available && outdoor.dew_point != null) {
+    botMarkers.push({ x: tempToXLocal(outdoor.dew_point), label: `Out Dew ${outdoor.dew_point.toFixed(1)}\u00b0`, color: '#a855f7' });
+  }
+  if (frostThreshold != null) {
+    botMarkers.push({ x: tempToXLocal(frostThreshold), label: `Frost ${frostThreshold}\u00b0`, color: '#38bdf8' });
+  }
+
+  ctx.font = '600 10px Inter, sans-serif';
+
+  function assignRows(markers) {
+    // Sort by x position, then greedily assign rows to avoid overlap
+    const sorted = [...markers].sort((a, b) => a.x - b.x);
+    const rows = []; // each row tracks rightmost occupied x
+    for (const m of sorted) {
+      const halfW = ctx.measureText(m.label).width / 2 + 8;
+      let placed = false;
+      for (let r = 0; r < rows.length; r++) {
+        if (m.x - halfW > rows[r]) {
+          m.row = r;
+          rows[r] = m.x + halfW;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        m.row = rows.length;
+        rows.push(m.x + halfW);
+      }
+    }
+  }
+
+  assignRows(topMarkers);
+  assignRows(botMarkers);
+
+  function drawMarker(m, isTop) {
+    const rowOffset = (m.row || 0) * 18;
+    const yPos = isTop ? trackY - 25 - rowOffset : trackY + trackH + 25 + rowOffset;
+
+    ctx.strokeStyle = m.color;
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.moveTo(x, trackY - (isTop ? 20 : -10));
-    ctx.lineTo(x, trackY + trackH + (isTop ? -10 : 20));
+    ctx.moveTo(m.x, trackY - (isTop ? 20 + rowOffset : -10));
+    ctx.lineTo(m.x, trackY + trackH + (isTop ? -10 : 20 + rowOffset));
     ctx.stroke();
     ctx.setLineDash([]);
 
     ctx.font = '600 10px Inter, sans-serif';
     ctx.textAlign = 'center';
-    const yPos = isTop ? trackY - 25 : trackY + trackH + 25;
 
-    // Label pill background
-    ctx.shadowColor = color;
+    ctx.shadowColor = m.color;
     ctx.shadowBlur = 5;
     ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-    const textWidth = ctx.measureText(label).width;
+    const textWidth = ctx.measureText(m.label).width;
     ctx.beginPath();
-    ctx.roundRect(x - textWidth / 2 - 6, yPos - 10, textWidth + 12, 16, 4);
+    ctx.roundRect(m.x - textWidth / 2 - 6, yPos - 10, textWidth + 12, 16, 4);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = color;
-    ctx.fillText(label, x, yPos + 2);
+    ctx.fillStyle = m.color;
+    ctx.fillText(m.label, m.x, yPos + 2);
   }
 
-  drawMarker(dewX, `Dew ${encDew.toFixed(1)}\u00b0`, '#ef4444', true);
-  drawMarker(marginX, 'Margin', '#f59e0b', true);
-
-  if (outdoor.available && outdoor.dew_point != null) {
-    drawMarker(tempToXLocal(outdoor.dew_point), `Out Dew ${outdoor.dew_point.toFixed(1)}\u00b0`, '#a855f7', false);
-  }
-  if (frostThreshold != null) {
-    drawMarker(tempToXLocal(frostThreshold), `Frost ${frostThreshold}\u00b0`, '#38bdf8', false);
-  }
+  for (const m of topMarkers) drawMarker(m, true);
+  for (const m of botMarkers) drawMarker(m, false);
 
   // 5. Current enclosure temp — animated glowing dot
   const encX = tempToXLocal(encTemp);
