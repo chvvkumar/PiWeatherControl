@@ -676,37 +676,43 @@ function drawFanCurve(time) {
   ctx.textAlign = 'center';
   ctx.fillText(`${fanThreshold}\u00b0`, threshX, yOn - 16);
 
-  // 3. Live sensor markers as elegant badges
-  function drawSensorBadge(label, temp, color, offsetMultiplier) {
-    if (temp == null) return;
-    const x = tempToX(temp, w, pad.left);
-    ctx.strokeStyle = color;
+  // 3. Live sensor markers as staggered badges
+  const badges = [
+    { label: 'CPU', temp: latestStatus?.sensors?.system?.cpu, color: '#818cf8' },
+    { label: 'SSD', temp: latestStatus?.sensors?.system?.ssd, color: '#f472b6' },
+    { label: 'Enc', temp: latestStatus?.sensors?.bme280?.temperature, color: '#34d399' },
+  ].filter(b => b.temp != null);
+
+  // Sort by x-position, assign each its own row
+  ctx.font = 'bold 10px Inter, sans-serif';
+  badges.sort((a, b) => a.temp - b.temp);
+  badges.forEach((b, i) => { b.row = i; });
+
+  for (const b of badges) {
+    const x = tempToX(b.temp, w, pad.left);
+    ctx.strokeStyle = b.color;
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
     ctx.setLineDash([]);
 
-    const badgeY = pad.top + (20 * offsetMultiplier);
-    const text = `${label} ${temp.toFixed(0)}\u00b0`;
+    const badgeY = pad.top + 10 + (b.row * 24);
+    const text = `${b.label} ${b.temp.toFixed(0)}\u00b0`;
     ctx.font = 'bold 10px Inter, sans-serif';
     const textW = ctx.measureText(text).width;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-    ctx.strokeStyle = color;
+    ctx.strokeStyle = b.color;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(x - textW / 2 - 6, badgeY - 12, textW + 12, 18, 4);
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = color;
+    ctx.fillStyle = b.color;
     ctx.textAlign = 'center';
     ctx.fillText(text, x, badgeY);
   }
-
-  drawSensorBadge('CPU', latestStatus?.sensors?.system?.cpu, '#818cf8', 0);
-  drawSensorBadge('SSD', latestStatus?.sensors?.system?.ssd, '#f472b6', 1);
-  drawSensorBadge('Enc', latestStatus?.sensors?.bme280?.temperature, '#34d399', 2);
 }
 
 function tempToX(temp, w, padLeft) {
