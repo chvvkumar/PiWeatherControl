@@ -2,8 +2,8 @@
 
 const POLL_MS = 5000;
 let config = {};
-let curvePoints = []; // [{temp, on}] sorted by temp
-let draggingPoint = null;
+let fanThreshold = 45; // single ON threshold temperature
+let draggingThreshold = false;
 let historyData = [];
 let _dewGaugeParams = null; // set by updateDewStatus, read by animation loop
 
@@ -495,110 +495,78 @@ function drawFanCurve(time) {
   ctx.fillText('ON', pad.left - 10, yOn + 4);
   ctx.fillText('OFF', pad.left - 10, yOff + 4);
 
-  // Hysteresis zone
   const hysteresis = parseFloat($('#fan-hysteresis')?.value) || 3;
-
-  // Sort points by temp
-  const sorted = [...curvePoints].sort((a, b) => a.temp - b.temp);
-
-  // Draw curve
   const animTime = time || performance.now();
+  const threshX = tempToX(fanThreshold, w, pad.left);
+  const hystX = tempToX(fanThreshold - hysteresis, w, pad.left);
 
-  if (sorted.length > 0) {
-    // Hysteresis shaded areas
-    for (const p of sorted) {
-      if (p.on) {
-        const x = tempToX(p.temp, w, pad.left);
-        const xH = tempToX(p.temp - hysteresis, w, pad.left);
-        const grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
-        grad.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
-        grad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(xH, pad.top, x - xH, h - pad.top - pad.bottom);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.moveTo(xH, pad.top); ctx.lineTo(xH, h - pad.bottom); ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    }
+  // Hysteresis shaded area
+  const grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+  grad.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+  grad.addColorStop(1, 'rgba(56, 189, 248, 0.02)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(hystX, pad.top, threshX - hystX, h - pad.top - pad.bottom);
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(hystX, pad.top); ctx.lineTo(hystX, h - pad.bottom); ctx.stroke();
+  ctx.setLineDash([]);
 
-    // Draw step curve path
+  // Draw step curve path: OFF until threshold, then ON
+  ctx.beginPath();
+  ctx.moveTo(pad.left, yOff);
+  ctx.lineTo(threshX, yOff);
+  ctx.lineTo(threshX, yOn);
+  ctx.lineTo(w - pad.right, yOn);
+
+  // Neon glow stroke
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#38bdf8';
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Gradient fill under curve
+  ctx.lineTo(w - pad.right, h - pad.bottom);
+  ctx.lineTo(pad.left, h - pad.bottom);
+  ctx.closePath();
+  const fillGrad = ctx.createLinearGradient(0, yOn, 0, h - pad.bottom);
+  fillGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+  fillGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+  ctx.fillStyle = fillGrad;
+  ctx.fill();
+
+  // Glowing orb at threshold point
+  const pulse = Math.sin(animTime * 0.006 + fanThreshold) * 3;
+  if (draggingThreshold) {
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 20;
     ctx.beginPath();
-    const firstY = sorted[0].on ? yOn : yOff;
-    ctx.moveTo(pad.left, firstY);
-
-    for (let i = 0; i < sorted.length; i++) {
-      const p = sorted[i];
-      const x = tempToX(p.temp, w, pad.left);
-
-      if (i === 0) {
-        const prevY = !p.on ? yOff : yOn;
-        ctx.lineTo(x, prevY);
-      }
-      ctx.lineTo(x, p.on ? yOn : yOff);
-
-      if (i < sorted.length - 1) {
-        ctx.lineTo(tempToX(sorted[i + 1].temp, w, pad.left), p.on ? yOn : yOff);
-      } else {
-        ctx.lineTo(w - pad.right, p.on ? yOn : yOff);
-      }
-    }
-
-    // Neon glow stroke
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 3;
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = 12;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Gradient fill under curve
-    ctx.lineTo(w - pad.right, h - pad.bottom);
-    ctx.lineTo(pad.left, h - pad.bottom);
-    ctx.closePath();
-    const fillGrad = ctx.createLinearGradient(0, yOn, 0, h - pad.bottom);
-    fillGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-    fillGrad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
-    ctx.fillStyle = fillGrad;
+    ctx.arc(threshX, yOn, 8, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
     ctx.fill();
-
-    // Glowing orb data points
-    for (const p of sorted) {
-      const x = tempToX(p.temp, w, pad.left);
-      const y = p.on ? yOn : yOff;
-      const pulse = Math.sin(animTime * 0.006 + p.temp) * 3;
-
-      if (p === draggingPoint) {
-        ctx.shadowColor = '#ffffff';
-        ctx.shadowBlur = 20;
-        ctx.beginPath();
-        ctx.arc(x, y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      } else {
-        ctx.shadowColor = p.on ? '#38bdf8' : '#94a3b8';
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.arc(x, y, 6 + Math.max(0, pulse), 0, Math.PI * 2);
-        ctx.fillStyle = p.on ? '#38bdf8' : '#64748b';
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-
-      // White center dot
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-
-      // Value label
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '600 10px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${p.temp}\u00b0`, x, y - 16);
-    }
+    ctx.shadowBlur = 0;
+  } else {
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.arc(threshX, yOn, 6 + Math.max(0, pulse), 0, Math.PI * 2);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
+
+  // White center dot
+  ctx.beginPath();
+  ctx.arc(threshX, yOn, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Value label
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '600 10px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${fanThreshold}\u00b0`, threshX, yOn - 16);
 
   // 3. Live sensor markers as elegant badges
   function drawSensorBadge(label, temp, color, offsetMultiplier) {
@@ -655,78 +623,30 @@ function initCurveEditor() {
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
     const w = rect.width;
-    const h = rect.height;
     const padLeft = 40;
     const padTop = 20;
-    const padBottom = 30;
     const yOn = padTop + 30;
-    const yOff = h - padBottom - 30;
 
-    for (const p of curvePoints) {
-      const px = tempToX(p.temp, w, padLeft);
-      const py = p.on ? yOn : yOff;
-      if (Math.hypot(mx - px, my - py) < 12) {
-        draggingPoint = p;
-        return;
-      }
+    const px = tempToX(fanThreshold, w, padLeft);
+    if (Math.hypot(mx - px, my - yOn) < 16) {
+      draggingThreshold = true;
     }
   });
 
   canvas.addEventListener('mousemove', (e) => {
-    if (!draggingPoint) return;
+    if (!draggingThreshold) return;
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
     const w = rect.width;
-    const h = rect.height;
     const padLeft = 40;
 
-    draggingPoint.temp = Math.round(Math.max(0, Math.min(80, xToTemp(mx, w, padLeft))));
-    draggingPoint.on = my < h / 2;
+    fanThreshold = Math.round(Math.max(0, Math.min(80, xToTemp(mx, w, padLeft))));
   });
 
-  canvas.addEventListener('mouseup', () => { draggingPoint = null; });
-  canvas.addEventListener('mouseleave', () => { draggingPoint = null; });
+  canvas.addEventListener('mouseup', () => { draggingThreshold = false; });
+  canvas.addEventListener('mouseleave', () => { draggingThreshold = false; });
 
-  // Right-click to remove point
-  canvas.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const w = rect.width;
-    const h = rect.height;
-    const padLeft = 40;
-    const padTop = 20;
-    const padBottom = 30;
-    const yOn = padTop + 30;
-    const yOff = h - padBottom - 30;
-
-    for (let i = 0; i < curvePoints.length; i++) {
-      const p = curvePoints[i];
-      const px = tempToX(p.temp, w, padLeft);
-      const py = p.on ? yOn : yOff;
-      if (Math.hypot(mx - px, my - py) < 12) {
-        curvePoints.splice(i, 1);
-        return;
-      }
-    }
-  });
-
-  // Add point button
-  $('#curve-add-btn')?.addEventListener('click', () => {
-    // Find a gap in the curve
-    const temps = curvePoints.map(p => p.temp).sort((a, b) => a - b);
-    let newTemp = 40;
-    if (temps.length) {
-      newTemp = temps[temps.length - 1] + 5;
-      if (newTemp > 75) newTemp = 25;
-    }
-    curvePoints.push({ temp: newTemp, on: true });
-    drawFanCurve();
-  });
-
-  // Save curve
+  // Save threshold
   $('#curve-save-btn')?.addEventListener('click', async () => {
     const sources = {
       cpu: $('#src-cpu').checked,
@@ -738,7 +658,7 @@ function initCurveEditor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         fan: {
-          curve: curvePoints,
+          threshold: fanThreshold,
           hysteresis: parseFloat($('#fan-hysteresis').value) || 3,
           min_on_seconds: parseInt($('#fan-min-on').value) || 120,
           min_off_seconds: parseInt($('#fan-min-off').value) || 120,
@@ -775,7 +695,7 @@ function initModeButtons() {
 // ── Config UI ────────────────────────────────────────────────────
 function populateConfigUI(cfg) {
   if (cfg.fan) {
-    curvePoints = cfg.fan.curve || [];
+    fanThreshold = cfg.fan.threshold ?? 45;
     $('#fan-hysteresis').value = cfg.fan.hysteresis ?? 3;
     $('#fan-min-on').value = cfg.fan.min_on_seconds ?? 120;
     $('#fan-min-off').value = cfg.fan.min_off_seconds ?? 120;

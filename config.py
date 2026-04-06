@@ -10,10 +10,7 @@ CONFIG_FILE = Path(__file__).parent / "config.json"
 DEFAULT_CONFIG = {
     "fan": {
         "mode": "auto",
-        "curve": [
-            {"temp": 35, "on": True},
-            {"temp": 45, "on": True},
-        ],
+        "threshold": 45,
         "hysteresis": 3,
         "sources": {"cpu": True, "ssd": True, "enclosure": True},
         "min_on_seconds": 120,

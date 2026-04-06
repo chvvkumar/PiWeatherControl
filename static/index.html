@@ -149,7 +149,7 @@
               <svg class="panel-icon icon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
               Thermal Fan Curve
             </h2>
-            <p class="panel-subtitle">Step-function active cooling thresholds</p>
+            <p class="panel-subtitle">Active cooling temperature threshold</p>
           </div>
           <div class="fan-sources">
             <label><input type="checkbox" id="src-cpu" checked> CPU</label>
@@ -163,7 +163,6 @@
             <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
             <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>
             <label>Min OFF: <input type="number" id="fan-min-off" value="120" min="0" max="600" step="10">s</label>
-            <button id="curve-add-btn" class="btn-small">+ Add Point</button>
             <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
           </div>
         </div>
