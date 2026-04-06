@@ -67,7 +67,8 @@ if [ "$(uname)" = "Linux" ]; then
         RUN_USER="${SUDO_USER:-$USER}"
         RUN_GROUP="$(id -gn "$RUN_USER")"
 
-        cat > /tmp/${SERVICE_NAME}.service <<EOF
+        if [ "$(id -u)" -eq 0 ]; then
+            cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=PiWeatherControl Enclosure Controller
 After=network-online.target
@@ -86,9 +87,6 @@ Environment=PYTHONUNBUFFERED=1
 [Install]
 WantedBy=multi-user.target
 EOF
-
-        if [ "$(id -u)" -eq 0 ]; then
-            mv /tmp/${SERVICE_NAME}.service "$SERVICE_FILE"
             systemctl daemon-reload
             systemctl enable "$SERVICE_NAME"
             echo "Service installed and enabled."
@@ -98,9 +96,8 @@ EOF
                 echo "Service started. Check status with: systemctl status $SERVICE_NAME"
             fi
         else
-            echo "Run this script with sudo to install the systemd service, or manually copy:"
-            echo "  sudo cp /tmp/${SERVICE_NAME}.service $SERVICE_FILE"
-            echo "  sudo systemctl daemon-reload && sudo systemctl enable $SERVICE_NAME"
+            echo "Root privileges required. Re-run with sudo to install the systemd service:"
+            echo "  sudo ./install.sh"
         fi
     fi
 fi
