@@ -454,7 +454,7 @@ details[open] summary::before {
 .dew-gauge-wrap {
   width: 100%;
   min-width: 0;
-  height: 130px;
+  height: 180px;
   position: relative;
   z-index: 1;
   margin-bottom: 12px;

@@ -322,7 +322,7 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
   const tMin = Math.floor(Math.min(...allTemps) - 5);
   const tMax = Math.ceil(Math.max(...allTemps) + 5);
 
-  const trackY = pad.top + 30;
+  const trackY = Math.round(h * 0.45);
   const trackH = 12;
 
   function tempToXLocal(t) {
@@ -422,7 +422,7 @@ function drawDewGauge(encTemp, encDew, outdoor, dewMargin, hysteresis, frostThre
   assignRows(botMarkers);
 
   function drawMarker(m, isTop) {
-    const rowOffset = (m.row || 0) * 18;
+    const rowOffset = (m.row || 0) * 22;
     const yPos = isTop ? trackY - 25 - rowOffset : trackY + trackH + 25 + rowOffset;
 
     ctx.strokeStyle = m.color;
