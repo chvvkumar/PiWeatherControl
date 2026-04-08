@@ -1,7 +1,41 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(ssh allskypi5:*)",
+      "Bash(ssh -o StrictHostKeyChecking=no allskypi5 \"cat /home/pi/git/PiWeatherControl/config.json\")",
+      "Bash(ssh -o StrictHostKeyChecking=no pi@allskypi5 \"cat /home/pi/git/PiWeatherControl/config.json\")",
+      "Bash(ssh pi@allskypi5 \"cd /home/pi/git/PiWeatherControl && git status\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(ssh pi@allskypi5 \"cd /home/pi/git/PiWeatherControl && git pull && sudo systemctl restart enclosure.service\")",
+      "Bash(ssh pi@allskypi5 \"systemctl list-units --type=service | grep -i encl\")",
+      "Bash(ssh pi@allskypi5 \"sudo systemctl restart piweathercontrol.service\")",
+      "Bash(ssh pi@allskypi5 \"find /sys -name '*fan*' 2>/dev/null\")",
+      "Bash(ssh pi@allskypi5 \"cat /sys/devices/platform/cooling_fan/hwmon/hwmon3/fan1_input\")",
+      "Bash(ssh pi@allskypi5 \"ls /sys/devices/platform/cooling_fan/hwmon/hwmon3/\")",
+      "Bash(ssh pi@allskypi5 'ls /sys/class/thermal/ && echo '\\\\''---'\\\\'' && for d in /sys/class/thermal/cooling_device*/; do echo \"$d: $\\(cat ${d}type\\)\"; done')",
+      "Bash(ssh pi@allskypi5 'for d in /sys/class/hwmon/hwmon*/; do echo \"$d: $\\(cat ${d}name 2>/dev/null\\)\"; done')",
+      "Bash(ssh pi@allskypi5 \"cat /sys/devices/platform/cooling_fan/hwmon/hwmon3/pwm1 && echo '---' && cat /sys/devices/platform/cooling_fan/hwmon/hwmon3/pwm1_enable && echo '---' && cat /sys/devices/platform/cooling_fan/hwmon/hwmon3/name\")",
+      "Bash(ssh pi@allskypi5 \"ls /sys/class/thermal/cooling_device0/\")",
+      "Bash(ssh pi@allskypi5 \"cat /sys/class/thermal/cooling_device0/cur_state && echo '---' && cat /sys/class/thermal/cooling_device0/max_state\")",
+      "Bash(ssh pi@allskypi5 \"ls /sys/class/thermal/thermal_zone0/ && echo '====' && cat /sys/class/thermal/thermal_zone0/type && echo '====' && cat /sys/class/thermal/thermal_zone0/temp\")",
+      "Bash(ssh pi@allskypi5 \"for i in 0 1 2 3 4; do echo \\\\\"trip_point_\\\\${i}: temp=\\\\$\\(cat /sys/class/thermal/thermal_zone0/trip_point_\\\\${i}_temp\\) type=\\\\$\\(cat /sys/class/thermal/thermal_zone0/trip_point_\\\\${i}_type\\) hyst=\\\\$\\(cat /sys/class/thermal/thermal_zone0/trip_point_\\\\${i}_hyst\\)\\\\\"; done\")",
+      "Bash(ssh pi@allskypi5 \"for i in 0 1 2 3 4; do echo \\\\\"cdev\\\\${i}: \\\\$\\(cat /sys/class/thermal/thermal_zone0/cdev\\\\${i} 2>/dev/null\\) trip=\\\\$\\(cat /sys/class/thermal/thermal_zone0/cdev\\\\${i}_trip_point 2>/dev/null\\) weight=\\\\$\\(cat /sys/class/thermal/thermal_zone0/cdev\\\\${i}_weight 2>/dev/null\\)\\\\\"; done\")",
+      "Bash(ssh pi@allskypi5 \"cat /sys/class/thermal/thermal_zone0/policy && echo '---' && cat /sys/class/thermal/thermal_zone0/available_policies\")",
+      "Bash(ssh pi@allskypi5 'for p in fan_temp0 fan_temp0_speed fan_temp0_hyst fan_temp1 fan_temp1_speed fan_temp1_hyst fan_temp2 fan_temp2_speed fan_temp2_hyst fan_temp3 fan_temp3_speed fan_temp3_hyst; do echo \"$p: $\\(xxd -p /sys/firmware/devicetree/base/__overrides__/$p 2>/dev/null\\)\"; done')",
+      "Bash(ssh pi@allskypi5 \"cat /sys/firmware/devicetree/base/cooling_fan/status 2>/dev/null; echo '---'; ls /sys/firmware/devicetree/base/cooling_fan/ 2>/dev/null\")",
+      "Bash(ssh pi@allskypi5 \"xxd -p /sys/firmware/devicetree/base/cooling_fan/cooling-levels && echo '---' && xxd -p /sys/firmware/devicetree/base/cooling_fan/cooling-max-state && echo '---' && xxd -p /sys/firmware/devicetree/base/cooling_fan/cooling-min-state\")",
+      "Bash(ssh pi@allskypi5 \"od -A x -t x1 /sys/firmware/devicetree/base/cooling_fan/cooling-levels\")",
+      "Bash(ssh pi@allskypi5 \"grep -i fan /boot/firmware/config.txt 2>/dev/null; grep -i fan /boot/config.txt 2>/dev/null\")",
+      "Bash(ssh pi@allskypi5 \"echo 'Current CPU temp:' && cat /sys/class/thermal/thermal_zone0/temp && echo 'Fan RPM:' && cat /sys/class/hwmon/hwmon3/fan1_input && echo 'PWM value \\(0-255\\):' && cat /sys/class/hwmon/hwmon3/pwm1 && echo 'PWM enable:' && cat /sys/class/hwmon/hwmon3/pwm1_enable && echo 'Cooling device state \\(0-4\\):' && cat /sys/class/thermal/cooling_device0/cur_state\")",
+      "Bash(ssh pi@allskypi5 \"cd /home/pi/git/PiWeatherControl && git pull && sudo systemctl restart piweathercontrol.service\")",
+      "Bash(ssh pi@allskypi5 \"curl -s http://localhost:8080/api/status | python3 -m json.tool\")",
+      "Bash(ssh pi@allskypi5 \"sudo systemctl status piweathercontrol.service | head -15\")",
+      "Bash(ssh pi@allskypi5 \"curl -s http://localhost:8080/api/status\")",
+      "Bash(ssh pi@allskypi5 \"grep -E 'port|host|uvicorn' /home/pi/git/PiWeatherControl/app.py | tail -5\")",
+      "Bash(ssh pi@allskypi5 \"curl -s http://localhost:8085/api/status | python3 -c 'import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d[\\\\\"sensors\\\\\"][\\\\\"pi_fan\\\\\"], indent=2\\)\\)'\")",
+      "Bash(ssh pi@allskypi5 \"ls -l /sys/class/thermal/thermal_zone0/trip_point_{1,2,3,4}_temp && echo '---' && ls -l /sys/class/hwmon/hwmon3/pwm1 && echo '---' && cat /sys/class/thermal/cooling_device0/max_state && echo '---' && ls -l /sys/class/thermal/cooling_device0/cur_state\")"
     ]
   }
 }

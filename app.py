@@ -5,6 +5,8 @@ import collections
 import json
 import logging
 import math
+import shutil
+import subprocess
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -222,6 +224,129 @@ def apply_control(snapshot: SensorSnapshot, cfg: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Pi system status helpers
+# ---------------------------------------------------------------------------
+def _vcgencmd(cmd: str) -> str:
+    """Run a vcgencmd command and return its stdout, or empty string on failure."""
+    try:
+        result = subprocess.run(
+            ["vcgencmd", cmd] if " " not in cmd else ["vcgencmd"] + cmd.split(),
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return ""
+
+
+def _parse_vcgencmd_value(raw: str) -> str:
+    """Extract the value after '=' from vcgencmd output like 'temp=34.5'C'."""
+    if "=" in raw:
+        return raw.split("=", 1)[1]
+    return raw
+
+
+def _collect_pi_status(snapshot: SensorSnapshot) -> dict:
+    """Gather disk, CPU temp, throttle, clock, and voltage data for pistatus.json."""
+    # --- Disk usage ---
+    try:
+        usage = shutil.disk_usage("/")
+        total = f"{usage.total / (1024 ** 3):.2f}G"
+        used = f"{usage.used / (1024 ** 3):.2f}G"
+        free = f"{usage.free / (1024 ** 3):.2f}G"
+    except Exception:
+        total = used = free = "N/A"
+
+    # --- CPU temp ---
+    cpu_temp = str(snapshot.system.cpu) if snapshot.system.cpu is not None else "0"
+
+    # --- Throttle status ---
+    throttled_raw = _vcgencmd("get_throttled")
+    throttled_hex = _parse_vcgencmd_value(throttled_raw) if throttled_raw else "0x0"
+    try:
+        throttle_bits = int(throttled_hex, 16)
+    except ValueError:
+        throttle_bits = 0
+
+    # --- Clock speeds (GHz) ---
+    clock_names = ["arm", "core", "isp", "v3d", "uart", "pwm", "emmc", "pixel", "vec", "hdmi", "dpi"]
+    clocks = {}
+    for name in clock_names:
+        raw = _vcgencmd(f"measure_clock {name}")
+        val = _parse_vcgencmd_value(raw)
+        try:
+            # vcgencmd returns frequency in Hz, convert to GHz
+            hz = int(val.rstrip("'\""))
+            clocks[name] = hz / 1_000_000_000.0
+        except (ValueError, AttributeError):
+            clocks[name] = 0.0
+
+    # --- Voltages ---
+    voltage_names = ["core", "sdram_c", "sdram_i", "sdram_p"]
+    voltages = {}
+    for name in voltage_names:
+        raw = _vcgencmd(f"measure_volts {name}")
+        val = _parse_vcgencmd_value(raw)
+        try:
+            voltages[name] = float(val.rstrip("V'\""))
+        except (ValueError, AttributeError):
+            voltages[name] = 0.0
+
+    return {
+        "AS_DISKSIZE": total,
+        "AS_DISKUSAGE": used,
+        "AS_DISKFREE": free,
+        "AS_CPUTEMP": cpu_temp,
+        "AS_THROTTLEDBINARY": throttled_hex,
+        "AS_TSTAT0": str(bool(throttle_bits & (1 << 0))),
+        "AS_TSTAT1": str(bool(throttle_bits & (1 << 1))),
+        "AS_TSTAT2": str(bool(throttle_bits & (1 << 2))),
+        "AS_TSTAT3": str(bool(throttle_bits & (1 << 3))),
+        "AS_TSTAT16": str(bool(throttle_bits & (1 << 16))),
+        "AS_TSTAT17": str(bool(throttle_bits & (1 << 17))),
+        "AS_TSTAT18": str(bool(throttle_bits & (1 << 18))),
+        "AS_TSTAT19": str(bool(throttle_bits & (1 << 19))),
+        "AS_TSTATSUMARYTEXT": _throttle_summary(throttle_bits),
+        "AS_CLOCKARM": str(clocks["arm"]),
+        "AS_CLOCKCORE": str(clocks["core"]),
+        "AS_CLOCKISP": str(clocks["isp"]),
+        "AS_CLOCKV3D": str(clocks["v3d"]),
+        "AS_CLOCKUART": str(clocks["uart"]),
+        "AS_CLOCKPWM": str(clocks["pwm"]),
+        "AS_CLOCKEMMC": str(clocks["emmc"]),
+        "AS_CLOCKPIXEL": str(clocks["pixel"]),
+        "AS_CLOCKVEC": str(clocks["vec"]),
+        "AS_CLOCKHDMI": str(clocks["hdmi"]),
+        "AS_CLOCKDPI": str(clocks["dpi"]),
+        "AS_VOLTAGECORE": str(voltages["core"]),
+        "AS_VOLTAGESDRAM_C": str(voltages["sdram_c"]),
+        "AS_VOLTAGESDRAM_I": str(voltages["sdram_i"]),
+        "AS_VOLTAGESDRAM_P": str(voltages["sdram_p"]),
+    }
+
+
+def _throttle_summary(bits: int) -> str:
+    """Build a human-readable summary of throttle flags, empty if none set."""
+    flags = []
+    if bits & (1 << 0):
+        flags.append("Under-voltage detected")
+    if bits & (1 << 1):
+        flags.append("Arm frequency capped")
+    if bits & (1 << 2):
+        flags.append("Currently throttled")
+    if bits & (1 << 3):
+        flags.append("Soft temperature limit active")
+    if bits & (1 << 16):
+        flags.append("Under-voltage has occurred")
+    if bits & (1 << 17):
+        flags.append("Arm frequency capping has occurred")
+    if bits & (1 << 18):
+        flags.append("Throttling has occurred")
+    if bits & (1 << 19):
+        flags.append("Soft temperature limit has occurred")
+    return ", ".join(flags)
+
+
+# ---------------------------------------------------------------------------
 # Allsky overlay JSON writer
 # ---------------------------------------------------------------------------
 def write_allsky_files(snapshot: SensorSnapshot, cfg: dict) -> None:
@@ -265,6 +390,34 @@ def write_allsky_files(snapshot: SensorSnapshot, cfg: dict) -> None:
         "OTH_PWM_DUTY_CYCLE": 0,
         "OTH_TEMPERATURE": bme.temperature if bme.temperature is not None else 0,
     }
+
+    # --- allskytemp.json ---
+    temp_data = {
+        "AS_GPIOSTATE1": "N/A",
+        "AS_TEMPSENSOR1": "BME280-I2C",
+        "AS_TEMPSENSORNAME1": "BME280_Box_",
+        "AS_TEMPAMBIENT1": str(bme.temperature) if bme.temperature is not None else "0",
+        "AS_TEMPDEW1": str(bme.dew_point) if bme.dew_point is not None else "0",
+        "AS_TEMPHUMIDITY1": str(bme.humidity) if bme.humidity is not None else "0",
+        "AS_TEMPPRESSURE1": pressure,
+        "AS_TEMPRELHUMIDITY1": humidity,
+        "AS_TEMPALTITUDE1": altitude,
+    }
+
+    # --- pistatus.json ---
+    pi_data = _collect_pi_status(snapshot)
+
+    try:
+        temp_path = output_dir / "allskytemp.json"
+        temp_path.write_text(json.dumps(temp_data, indent=4) + "\n")
+    except Exception as e:
+        log.warning(f"Failed to write allskytemp.json: {e}")
+
+    try:
+        pi_path = output_dir / "pistatus.json"
+        pi_path.write_text(json.dumps(pi_data, indent=4) + "\n")
+    except Exception as e:
+        log.warning(f"Failed to write pistatus.json: {e}")
 
     try:
         dew_path = output_dir / "allskydew.json"
