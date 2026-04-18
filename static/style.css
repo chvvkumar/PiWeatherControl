@@ -841,9 +841,15 @@ circle.pin[tabindex="0"]:focus {
 /* ===== Settings page two-column layout ===== */
 #settings {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) 1fr;
+  grid-template-columns: minmax(420px, 500px) 1fr;
   gap: 16px;
   align-items: start;
+}
+
+.settings-left .pinout-svg {
+  width: 100%;
+  max-width: 340px;
+  height: auto;
 }
 
 .settings-left,
