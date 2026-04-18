@@ -822,3 +822,41 @@ circle.pin[tabindex="0"]:focus {
   border-color: #3b82f6;
   color: #fff;
 }
+
+/* ===== GPIO card two-column layout ===== */
+.gpio-two-col {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.gpio-two-col .pinout-container {
+  padding: 8px 0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.gpio-two-col .pinout-svg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+.gpio-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+  padding-top: 8px;
+}
+
+.gpio-controls .checkbox-label {
+  font-size: 0.95em;
+}
+
+@media (max-width: 800px) {
+  .gpio-two-col {
+    grid-template-columns: 1fr;
+  }
+}

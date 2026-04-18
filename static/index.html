@@ -190,14 +190,14 @@
       <!-- 1. Hardware / GPIO -->
       <section class="card wide-card settings-card">
         <div class="card-header">Hardware / GPIO</div>
-        <form id="form-gpio" class="settings-form">
+        <form id="form-gpio" class="settings-form gpio-two-col">
           <div id="pinout-container" class="pinout-container" aria-live="polite"></div>
-          <div class="settings-row">
+          <div class="gpio-controls">
             <label class="checkbox-label"><input type="checkbox" id="gpio-invert-relay"> Invert relay (active-low)</label>
             <button type="submit" class="btn-small btn-primary">Save GPIO</button>
-          </div>
-          <div id="gpio-restart-banner" class="settings-banner hidden">
-            GPIO changes saved. Restart required: <code>sudo systemctl restart piweathercontrol</code>
+            <div id="gpio-restart-banner" class="settings-banner hidden">
+              GPIO changes saved. Restart required: <code>sudo systemctl restart piweathercontrol</code>
+            </div>
           </div>
         </form>
       </section>

@@ -5,6 +5,7 @@ const PIN_RADIUS = 12;
 const PIN_SPACING_X = 48;
 const PIN_SPACING_Y = 32;
 const PADDING = 28;
+const LABEL_WIDTH = 64; // room for "GPIO 22" + "FAN"/"HEATER" badge on each side
 
 const TYPE_CLASS = {
   "3v3": "pin pin-3v3",
@@ -57,8 +58,9 @@ function _render() {
   headerInfo.textContent = `${_layout.model} (${_layout.family})`;
   _rootEl.appendChild(headerInfo);
 
-  const width = PADDING * 2 + PIN_SPACING_X;
+  const width = PADDING * 2 + PIN_SPACING_X + LABEL_WIDTH * 2;
   const height = PADDING * 2 + PIN_SPACING_Y * 19;
+  const leftEdge = PADDING + LABEL_WIDTH;
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "pinout-svg");
@@ -68,7 +70,7 @@ function _render() {
 
   // Header backing rectangle for visual grouping.
   const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  bg.setAttribute("x", PADDING - PIN_RADIUS - 4);
+  bg.setAttribute("x", leftEdge - PIN_RADIUS - 4);
   bg.setAttribute("y", PADDING - PIN_RADIUS - 4);
   bg.setAttribute("width", PIN_SPACING_X + (PIN_RADIUS + 4) * 2);
   bg.setAttribute("height", PIN_SPACING_Y * 19 + (PIN_RADIUS + 4) * 2);
@@ -78,7 +80,7 @@ function _render() {
 
   // Pin 1 square corner indicator.
   const corner = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  corner.setAttribute("x", PADDING - PIN_RADIUS - 2);
+  corner.setAttribute("x", leftEdge - PIN_RADIUS - 2);
   corner.setAttribute("y", PADDING - PIN_RADIUS - 2);
   corner.setAttribute("width", PIN_RADIUS * 2 + 4);
   corner.setAttribute("height", PIN_RADIUS * 2 + 4);
@@ -95,7 +97,7 @@ function _render() {
 function _renderPin(pin) {
   const col = (pin.physical_pin % 2 === 1) ? 0 : 1; // odd -> left
   const row = Math.floor((pin.physical_pin - 1) / 2);
-  const cx = PADDING + col * PIN_SPACING_X;
+  const cx = PADDING + LABEL_WIDTH + col * PIN_SPACING_X;
   const cy = PADDING + row * PIN_SPACING_Y;
 
   const assignedDevice = _deviceAssignedTo(pin.bcm);
