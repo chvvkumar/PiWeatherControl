@@ -1,5 +1,7 @@
 /* Enclosure Controller — Frontend */
 
+import { initPinout, getAssignments, setAssignments } from "/static/pinout.js";
+
 const POLL_MS = 5000;
 let config = {};
 let fanThreshold = 45; // single ON threshold temperature
@@ -51,7 +53,7 @@ async function fetchConfig() {
   const data = await api('/api/config');
   if (!data) return;
   config = data;
-  populateConfigUI(data);
+  if (data.fan?.threshold != null) fanThreshold = data.fan.threshold;
 }
 
 async function fetchHistory() {
@@ -603,7 +605,7 @@ function drawFanCurve(time) {
   ctx.fillText('ON', pad.left - 10, yOn + 4);
   ctx.fillText('OFF', pad.left - 10, yOff + 4);
 
-  const hysteresis = parseFloat($('#fan-hysteresis')?.value) || 3;
+  const hysteresis = config.fan?.hysteresis ?? 3;
   const animTime = time || performance.now();
   const threshX = tempToX(fanThreshold, w, pad.left);
   const hystX = tempToX(fanThreshold - hysteresis, w, pad.left);
@@ -759,31 +761,17 @@ function initCurveEditor() {
     fanThreshold = Math.round(Math.max(0, Math.min(80, xToTemp(mx, w, padLeft))));
   });
 
-  canvas.addEventListener('mouseup', () => { draggingThreshold = false; });
-  canvas.addEventListener('mouseleave', () => { draggingThreshold = false; });
-
-  // Save threshold
-  $('#curve-save-btn')?.addEventListener('click', async () => {
-    const sources = {
-      cpu: $('#src-cpu').checked,
-      ssd: $('#src-ssd').checked,
-      enclosure: $('#src-enclosure').checked,
-    };
+  canvas.addEventListener('mouseup', async () => {
+    if (!draggingThreshold) return;
+    draggingThreshold = false;
     await api('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        fan: {
-          threshold: fanThreshold,
-          hysteresis: parseFloat($('#fan-hysteresis').value) || 3,
-          min_on_seconds: parseInt($('#fan-min-on').value) || 120,
-          min_off_seconds: parseInt($('#fan-min-off').value) || 120,
-          sources,
-        }
-      }),
+      body: JSON.stringify({ fan: { threshold: fanThreshold } }),
     });
     await fetchConfig();
   });
+  canvas.addEventListener('mouseleave', () => { draggingThreshold = false; });
 }
 
 // ── Mode buttons ─────────────────────────────────────────────────
@@ -805,101 +793,6 @@ function initModeButtons() {
       await fetchStatus();
       await fetchEvents();
     });
-  });
-}
-
-// ── Config UI ────────────────────────────────────────────────────
-function populateConfigUI(cfg) {
-  if (cfg.fan) {
-    fanThreshold = cfg.fan.threshold ?? 45;
-    $('#fan-hysteresis').value = cfg.fan.hysteresis ?? 3;
-    $('#fan-min-on').value = cfg.fan.min_on_seconds ?? 120;
-    $('#fan-min-off').value = cfg.fan.min_off_seconds ?? 120;
-    if (cfg.fan.sources) {
-      $('#src-cpu').checked = cfg.fan.sources.cpu !== false;
-      $('#src-ssd').checked = cfg.fan.sources.ssd !== false;
-      $('#src-enclosure').checked = cfg.fan.sources.enclosure !== false;
-    }
-    // Fan curve redrawn by animation loop
-  }
-  if (cfg.heater) {
-    $('#dew-margin').value = cfg.heater.dew_margin ?? 5;
-    $('#outside-threshold').value = cfg.heater.outside_temp_threshold ?? 2;
-    $('#heater-hysteresis').value = cfg.heater.hysteresis ?? 2;
-    $('#heater-min-on').value = cfg.heater.min_on_seconds ?? 120;
-    $('#heater-min-off').value = cfg.heater.min_off_seconds ?? 120;
-    $('#fan-off-when-heating').checked = cfg.heater.fan_off_when_heating !== false;
-  }
-  if (cfg.ha) {
-    $('#ha-url').value = cfg.ha.url || '';
-    $('#ha-token').value = cfg.ha.token || '';
-    $('#ha-temp-entity').value = cfg.ha.temp_entity_id || '';
-    $('#ha-humid-entity').value = cfg.ha.humidity_entity_id || '';
-  }
-}
-
-function initSaveButtons() {
-  // Heater save
-  $('#heater-save-btn')?.addEventListener('click', async () => {
-    await api('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        heater: {
-          dew_margin: parseFloat($('#dew-margin').value) || 5,
-          outside_temp_threshold: parseFloat($('#outside-threshold').value) || 2,
-          hysteresis: parseFloat($('#heater-hysteresis').value) || 2,
-          min_on_seconds: parseInt($('#heater-min-on').value) || 120,
-          min_off_seconds: parseInt($('#heater-min-off').value) || 120,
-          fan_off_when_heating: $('#fan-off-when-heating').checked,
-        }
-      }),
-    });
-    await fetchConfig();
-  });
-
-  // HA save
-  $('#ha-save-btn')?.addEventListener('click', async () => {
-    await api('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ha: {
-          url: $('#ha-url').value.trim(),
-          token: $('#ha-token').value.trim(),
-          temp_entity_id: $('#ha-temp-entity').value.trim(),
-          humidity_entity_id: $('#ha-humid-entity').value.trim(),
-        }
-      }),
-    });
-    await fetchConfig();
-  });
-
-  // HA test
-  $('#ha-test-btn')?.addEventListener('click', async () => {
-    // Save first, then check status
-    await api('/api/config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ha: {
-          url: $('#ha-url').value.trim(),
-          token: $('#ha-token').value.trim(),
-          temp_entity_id: $('#ha-temp-entity').value.trim(),
-          humidity_entity_id: $('#ha-humid-entity').value.trim(),
-        }
-      }),
-    });
-    // Wait a poll cycle then fetch
-    setTimeout(async () => {
-      await fetchStatus();
-      const badge = $('#ha-status');
-      if (badge.textContent === 'OK') {
-        alert('Home Assistant connection successful!');
-      } else {
-        alert('Home Assistant connection failed. Check URL, token, and entity IDs.');
-      }
-    }, 2000);
   });
 }
 
@@ -934,7 +827,7 @@ async function init() {
 
   initCurveEditor();
   initModeButtons();
-  initSaveButtons();
+  initTabs();
 
   // Redraw sparklines on resize (gauges handled by animation loop)
   window.addEventListener('resize', () => {
@@ -957,3 +850,200 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// ── Tab switching ────────────────────────────────────────────────
+function initTabs() {
+  const buttons = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      buttons.forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      panels.forEach((p) => {
+        p.classList.toggle('active', p.id === target);
+      });
+      if (target === 'settings') {
+        _loadSettingsPanel();
+      }
+    });
+  });
+}
+
+// ── Settings panel ───────────────────────────────────────────────
+let _settingsLoaded = false;
+let _currentConfig = null;
+
+async function _loadSettingsPanel() {
+  const cfg = await fetch('/api/config').then((r) => r.json());
+  _currentConfig = cfg;
+  _populateSettingsForms(cfg);
+
+  if (!_settingsLoaded) {
+    const layout = await fetch('/api/pi-info').then((r) => r.json());
+    const container = document.getElementById('pinout-container');
+    initPinout(
+      container,
+      layout,
+      { fan: cfg.gpio.fan_pin, heater: cfg.gpio.heater_pin },
+      () => {}
+    );
+    _wireSettingsForms();
+    _settingsLoaded = true;
+  } else {
+    setAssignments({ fan: cfg.gpio.fan_pin, heater: cfg.gpio.heater_pin });
+  }
+}
+
+function _populateSettingsForms(cfg) {
+  document.getElementById('gpio-invert-relay').checked = !!cfg.gpio.invert_relay;
+
+  document.getElementById('set-fan-threshold').value = cfg.fan.threshold;
+  document.getElementById('set-fan-hysteresis').value = cfg.fan.hysteresis;
+  document.getElementById('set-fan-min-on').value = cfg.fan.min_on_seconds;
+  document.getElementById('set-fan-min-off').value = cfg.fan.min_off_seconds;
+  document.getElementById('set-src-cpu').checked = !!cfg.fan.sources.cpu;
+  document.getElementById('set-src-ssd').checked = !!cfg.fan.sources.ssd;
+  document.getElementById('set-src-enclosure').checked = !!cfg.fan.sources.enclosure;
+
+  document.getElementById('set-dew-margin').value = cfg.heater.dew_margin;
+  document.getElementById('set-outside-threshold').value = cfg.heater.outside_temp_threshold;
+  document.getElementById('set-heater-hysteresis').value = cfg.heater.hysteresis;
+  document.getElementById('set-heater-min-on').value = cfg.heater.min_on_seconds;
+  document.getElementById('set-heater-min-off').value = cfg.heater.min_off_seconds;
+  document.getElementById('set-fan-off-when-heating').checked = !!cfg.heater.fan_off_when_heating;
+
+  document.getElementById('set-ha-url').value = cfg.ha.url || '';
+  document.getElementById('set-ha-token').value = cfg.ha.token || '';
+  document.getElementById('set-ha-temp-entity').value = cfg.ha.temp_entity_id || '';
+  document.getElementById('set-ha-humid-entity').value = cfg.ha.humidity_entity_id || '';
+
+  document.getElementById('set-allsky-enabled').checked = !!(cfg.allsky && cfg.allsky.enabled);
+  document.getElementById('set-allsky-output-dir').value = (cfg.allsky && cfg.allsky.output_dir) || '';
+
+  document.getElementById('set-i2c-bus').value = cfg.i2c_bus;
+  document.getElementById('set-poll-interval').value = cfg.poll_interval;
+}
+
+async function _postConfig(partial) {
+  const resp = await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(partial),
+  });
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({ detail: resp.statusText }));
+    alert(`Save failed: ${body.detail || resp.statusText}`);
+    return null;
+  }
+  return resp.json();
+}
+
+function _wireSettingsForms() {
+  document.getElementById('form-gpio').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const { fan, heater } = getAssignments();
+    const body = {
+      gpio: {
+        fan_pin: fan,
+        heater_pin: heater,
+        invert_relay: document.getElementById('gpio-invert-relay').checked,
+      },
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      document.getElementById('gpio-restart-banner').classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('form-fan').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      fan: {
+        threshold: Number(document.getElementById('set-fan-threshold').value),
+        hysteresis: Number(document.getElementById('set-fan-hysteresis').value),
+        min_on_seconds: Number(document.getElementById('set-fan-min-on').value),
+        min_off_seconds: Number(document.getElementById('set-fan-min-off').value),
+        sources: {
+          cpu: document.getElementById('set-src-cpu').checked,
+          ssd: document.getElementById('set-src-ssd').checked,
+          enclosure: document.getElementById('set-src-enclosure').checked,
+        },
+      },
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      config = updated;
+      if (updated.fan?.threshold != null) fanThreshold = updated.fan.threshold;
+    }
+  });
+
+  document.getElementById('form-heater').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      heater: {
+        dew_margin: Number(document.getElementById('set-dew-margin').value),
+        outside_temp_threshold: Number(document.getElementById('set-outside-threshold').value),
+        hysteresis: Number(document.getElementById('set-heater-hysteresis').value),
+        min_on_seconds: Number(document.getElementById('set-heater-min-on').value),
+        min_off_seconds: Number(document.getElementById('set-heater-min-off').value),
+        fan_off_when_heating: document.getElementById('set-fan-off-when-heating').checked,
+      },
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      config = updated;
+    }
+  });
+
+  document.getElementById('form-ha').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      ha: {
+        url: document.getElementById('set-ha-url').value,
+        token: document.getElementById('set-ha-token').value,
+        temp_entity_id: document.getElementById('set-ha-temp-entity').value,
+        humidity_entity_id: document.getElementById('set-ha-humid-entity').value,
+      },
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      config = updated;
+    }
+  });
+
+  document.getElementById('form-allsky').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      allsky: {
+        enabled: document.getElementById('set-allsky-enabled').checked,
+        output_dir: document.getElementById('set-allsky-output-dir').value,
+      },
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      config = updated;
+    }
+  });
+
+  document.getElementById('form-system').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      i2c_bus: Number(document.getElementById('set-i2c-bus').value),
+      poll_interval: Number(document.getElementById('set-poll-interval').value),
+    };
+    const updated = await _postConfig(body);
+    if (updated) {
+      _currentConfig = updated;
+      config = updated;
+    }
+  });
+}
