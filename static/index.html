@@ -12,207 +12,276 @@
 <body>
   <header>
     <h1>Enclosure Controller</h1>
+    <nav class="tab-bar" role="tablist" aria-label="Primary">
+      <button class="tab-btn active" role="tab" aria-selected="true" data-tab="dashboard">Dashboard</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-tab="settings">Settings</button>
+    </nav>
     <span id="connection-status" class="status-dot connected" title="Connected"></span>
   </header>
 
   <main>
-    <!-- Sensor Cards Row -->
-    <section class="card-grid">
-      <div class="card" id="card-cpu">
-        <div class="card-header">CPU</div>
-        <div class="card-value"><span id="cpu-temp">--</span>&deg;C</div>
-        <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
-      </div>
-      <div class="card" id="card-ssd">
-        <div class="card-header">SSD</div>
-        <div class="card-value"><span id="ssd-temp">--</span>&deg;C</div>
-        <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
-      </div>
-      <div class="card" id="card-pi-fan">
-        <div class="card-header">Pi Fan</div>
-        <div class="card-value"><span id="pi-fan-rpm">--</span> RPM</div>
-        <div class="card-sub">
-          <span>PWM: <span id="pi-fan-pct">--</span>%</span>
+    <section id="dashboard" class="tab-panel active" role="tabpanel" aria-labelledby="tab-dashboard">
+      <!-- Sensor Cards Row -->
+      <section class="card-grid">
+        <div class="card" id="card-cpu">
+          <div class="card-header">CPU</div>
+          <div class="card-value"><span id="cpu-temp">--</span>&deg;C</div>
+          <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
         </div>
-        <canvas id="pi-fan-curve" class="sparkline" width="160" height="40"></canvas>
-      </div>
-      <div class="card" id="card-enclosure">
-        <div class="card-header">Enclosure (BME280)</div>
-        <div class="card-value"><span id="enc-temp">--</span>&deg;C</div>
-        <div class="card-sub">
-          <span>Humidity: <span id="enc-humidity">--</span>%</span>
-          <span>Dew: <span id="enc-dew">--</span>&deg;C</span>
+        <div class="card" id="card-ssd">
+          <div class="card-header">SSD</div>
+          <div class="card-value"><span id="ssd-temp">--</span>&deg;C</div>
+          <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
         </div>
-        <div class="card-sub">
-          <span>Pressure: <span id="enc-pressure">--</span> hPa</span>
+        <div class="card" id="card-pi-fan">
+          <div class="card-header">Pi Fan</div>
+          <div class="card-value"><span id="pi-fan-rpm">--</span> RPM</div>
+          <div class="card-sub">
+            <span>PWM: <span id="pi-fan-pct">--</span>%</span>
+          </div>
+          <canvas id="pi-fan-curve" class="sparkline" width="160" height="40"></canvas>
         </div>
-        <canvas id="spark-enclosure" class="sparkline" width="160" height="40"></canvas>
-      </div>
-      <div class="card" id="card-outdoor">
-        <div class="card-header">Outside (HA) <span id="ha-status" class="badge">--</span></div>
-        <div class="card-value"><span id="out-temp">--</span>&deg;C</div>
-        <div class="card-sub card-sub-lg">
-          <span>Humidity: <span id="out-humidity">--</span>%</span>
-          <span>Dew: <span id="out-dew">--</span>&deg;C</span>
+        <div class="card" id="card-enclosure">
+          <div class="card-header">Enclosure (BME280)</div>
+          <div class="card-value"><span id="enc-temp">--</span>&deg;C</div>
+          <div class="card-sub">
+            <span>Humidity: <span id="enc-humidity">--</span>%</span>
+            <span>Dew: <span id="enc-dew">--</span>&deg;C</span>
+          </div>
+          <div class="card-sub">
+            <span>Pressure: <span id="enc-pressure">--</span> hPa</span>
+          </div>
+          <canvas id="spark-enclosure" class="sparkline" width="160" height="40"></canvas>
         </div>
-      </div>
-      <div class="card" id="card-power">
-        <div class="card-header">Power (INA260)</div>
-        <div class="card-value"><span id="pwr-voltage">--</span> V</div>
-        <div class="card-sub card-sub-lg">
-          <span><span id="pwr-current">--</span> A</span>
-          <span><span id="pwr-power">--</span> W</span>
+        <div class="card" id="card-outdoor">
+          <div class="card-header">Outside (HA) <span id="ha-status" class="badge">--</span></div>
+          <div class="card-value"><span id="out-temp">--</span>&deg;C</div>
+          <div class="card-sub card-sub-lg">
+            <span>Humidity: <span id="out-humidity">--</span>%</span>
+            <span>Dew: <span id="out-dew">--</span>&deg;C</span>
+          </div>
         </div>
-      </div>
+        <div class="card" id="card-power">
+          <div class="card-header">Power (INA260)</div>
+          <div class="card-value"><span id="pwr-voltage">--</span> V</div>
+          <div class="card-sub card-sub-lg">
+            <span><span id="pwr-current">--</span> A</span>
+            <span><span id="pwr-power">--</span> W</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dew Status + Fan Curve (with relay controls above) -->
+      <section class="graph-row">
+        <div class="graph-column">
+          <div class="card relay-card" id="card-heater">
+            <div class="card-header">
+              <span>Dew Heater</span>
+              <span id="heater-indicator" class="relay-indicator off"></span>
+            </div>
+            <div class="relay-info">
+              <span>GPIO <span id="heater-pin">21</span></span>
+              <span>Cycles: <span id="heater-cycles">0</span></span>
+            </div>
+            <div class="mode-selector">
+              <button class="mode-btn" data-device="heater" data-mode="off">Off</button>
+              <button class="mode-btn active" data-device="heater" data-mode="auto">Auto</button>
+              <button class="mode-btn" data-device="heater" data-mode="on">On</button>
+            </div>
+          </div>
+          <div class="glass-panel" id="card-dew-status">
+          <div class="ambient-glow ambient-glow-red"></div>
+          <div class="glass-panel-header">
+            <div>
+              <h2 class="panel-title">
+                <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                Dew Point Analysis
+              </h2>
+              <p class="panel-subtitle">Comparing enclosure temperature against dew thresholds</p>
+            </div>
+            <div id="heater-badge" class="heater-badge hidden">
+              <span class="heater-badge-dot"></span>
+              <span class="heater-badge-text">HEATING ACTIVE</span>
+            </div>
+          </div>
+          <div class="dew-gauge-wrap">
+            <canvas id="dew-gauge"></canvas>
+          </div>
+          <div class="dew-indicators">
+            <div class="dew-indicator" id="dew-ind-proximity">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Enclosure</span>
+                <span class="dew-ind-value" id="dew-distance-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-outside">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Outdoor</span>
+                <span class="dew-ind-value" id="dew-outside-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-frost">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Frost</span>
+                <span class="dew-ind-value" id="dew-frost-val">--</span>
+              </div>
+            </div>
+            <div class="dew-indicator" id="dew-ind-fan-suppress">
+              <span class="dew-ind-dot"></span>
+              <div class="dew-ind-detail">
+                <span class="dew-ind-label">Fan Interlock</span>
+                <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="graph-column">
+          <div class="card relay-card" id="card-fan">
+            <div class="card-header">
+              <span>Fan Relay</span>
+              <span id="fan-indicator" class="relay-indicator off"></span>
+            </div>
+            <div class="relay-info">
+              <span>GPIO <span id="fan-pin">20</span></span>
+              <span>Cycles: <span id="fan-cycles">0</span></span>
+            </div>
+            <div class="mode-selector">
+              <button class="mode-btn" data-device="fan" data-mode="off">Off</button>
+              <button class="mode-btn active" data-device="fan" data-mode="auto">Auto</button>
+              <button class="mode-btn" data-device="fan" data-mode="on">On</button>
+            </div>
+          </div>
+          <div class="glass-panel" id="card-fan-curve">
+          <div class="ambient-glow ambient-glow-blue"></div>
+          <div class="glass-panel-header">
+            <div>
+              <h2 class="panel-title">
+                <svg class="panel-icon icon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                Thermal Fan Curve
+              </h2>
+              <p class="panel-subtitle">Active cooling temperature threshold</p>
+            </div>
+            <div class="fan-sources" id="dashboard-fan-sources">
+              <label><input type="checkbox" class="src-cpu" checked> CPU</label>
+              <label><input type="checkbox" class="src-ssd" checked> SSD</label>
+              <label><input type="checkbox" class="src-enclosure" checked> Enclosure</label>
+            </div>
+          </div>
+          <div class="curve-editor-wrap">
+            <canvas id="fan-curve-canvas"></canvas>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <!-- Event Log -->
+      <section class="card wide-card">
+        <div class="card-header">Event Log</div>
+        <div id="event-log" class="event-log"></div>
+      </section>
     </section>
 
-    <!-- Dew Status + Fan Curve (with relay controls above) -->
-    <section class="graph-row">
-      <div class="graph-column">
-        <div class="card relay-card" id="card-heater">
-          <div class="card-header">
-            <span>Dew Heater</span>
-            <span id="heater-indicator" class="relay-indicator off"></span>
-          </div>
-          <div class="relay-info">
-            <span>GPIO <span id="heater-pin">21</span></span>
-            <span>Cycles: <span id="heater-cycles">0</span></span>
-          </div>
-          <div class="mode-selector">
-            <button class="mode-btn" data-device="heater" data-mode="off">Off</button>
-            <button class="mode-btn active" data-device="heater" data-mode="auto">Auto</button>
-            <button class="mode-btn" data-device="heater" data-mode="on">On</button>
-          </div>
-        </div>
-        <div class="glass-panel" id="card-dew-status">
-        <div class="ambient-glow ambient-glow-red"></div>
-        <div class="glass-panel-header">
-          <div>
-            <h2 class="panel-title">
-              <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-              Dew Point Analysis
-            </h2>
-            <p class="panel-subtitle">Comparing enclosure temperature against dew thresholds</p>
-          </div>
-          <div id="heater-badge" class="heater-badge hidden">
-            <span class="heater-badge-dot"></span>
-            <span class="heater-badge-text">HEATING ACTIVE</span>
-          </div>
-        </div>
-        <div class="dew-gauge-wrap">
-          <canvas id="dew-gauge"></canvas>
-        </div>
-        <div class="dew-indicators">
-          <div class="dew-indicator" id="dew-ind-proximity">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Enclosure</span>
-              <span class="dew-ind-value" id="dew-distance-val">--</span>
-            </div>
-          </div>
-          <div class="dew-indicator" id="dew-ind-outside">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Outdoor</span>
-              <span class="dew-ind-value" id="dew-outside-val">--</span>
-            </div>
-          </div>
-          <div class="dew-indicator" id="dew-ind-frost">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Frost</span>
-              <span class="dew-ind-value" id="dew-frost-val">--</span>
-            </div>
-          </div>
-          <div class="dew-indicator" id="dew-ind-fan-suppress">
-            <span class="dew-ind-dot"></span>
-            <div class="dew-ind-detail">
-              <span class="dew-ind-label">Fan Interlock</span>
-              <span class="dew-ind-value" id="dew-fan-suppress-val">--</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-      <div class="graph-column">
-        <div class="card relay-card" id="card-fan">
-          <div class="card-header">
-            <span>Fan Relay</span>
-            <span id="fan-indicator" class="relay-indicator off"></span>
-          </div>
-          <div class="relay-info">
-            <span>GPIO <span id="fan-pin">20</span></span>
-            <span>Cycles: <span id="fan-cycles">0</span></span>
-          </div>
-          <div class="mode-selector">
-            <button class="mode-btn" data-device="fan" data-mode="off">Off</button>
-            <button class="mode-btn active" data-device="fan" data-mode="auto">Auto</button>
-            <button class="mode-btn" data-device="fan" data-mode="on">On</button>
-          </div>
-        </div>
-        <div class="glass-panel" id="card-fan-curve">
-        <div class="ambient-glow ambient-glow-blue"></div>
-        <div class="glass-panel-header">
-          <div>
-            <h2 class="panel-title">
-              <svg class="panel-icon icon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
-              Thermal Fan Curve
-            </h2>
-            <p class="panel-subtitle">Active cooling temperature threshold</p>
-          </div>
-          <div class="fan-sources">
-            <label><input type="checkbox" id="src-cpu" checked> CPU</label>
-            <label><input type="checkbox" id="src-ssd" checked> SSD</label>
-            <label><input type="checkbox" id="src-enclosure" checked> Enclosure</label>
-          </div>
-        </div>
-        <div class="curve-editor-wrap">
-          <canvas id="fan-curve-canvas"></canvas>
-          <div class="curve-controls">
-            <label>Hysteresis: <input type="number" id="fan-hysteresis" value="3" min="0" max="20" step="1">&deg;C</label>
-            <label>Min ON: <input type="number" id="fan-min-on" value="120" min="0" max="600" step="10">s</label>
-            <label>Min OFF: <input type="number" id="fan-min-off" value="120" min="0" max="600" step="10">s</label>
-            <button id="curve-save-btn" class="btn-small btn-primary">Save</button>
-          </div>
-        </div>
-      </div>
-      </div>
-    </section>
+    <section id="settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings">
 
-    <!-- Dew Heater Settings -->
-    <section class="card wide-card">
-      <div class="card-header">Dew Heater Settings</div>
-      <div class="settings-row">
-        <label>Dew Margin: <input type="number" id="dew-margin" value="5" min="0" max="20" step="0.5">&deg;C</label>
-        <label>Frost Threshold: <input type="number" id="outside-threshold" value="2" min="-20" max="20" step="0.5">&deg;C</label>
-        <label>Hysteresis: <input type="number" id="heater-hysteresis" value="2" min="0" max="10" step="0.5">&deg;C</label>
-        <label>Min ON: <input type="number" id="heater-min-on" value="120" min="0" max="600" step="10">s</label>
-        <label>Min OFF: <input type="number" id="heater-min-off" value="120" min="0" max="600" step="10">s</label>
-        <label class="checkbox-label"><input type="checkbox" id="fan-off-when-heating" checked> Fan off when heating</label>
-        <button id="heater-save-btn" class="btn-small btn-primary">Save</button>
-      </div>
-    </section>
+      <!-- 1. Hardware / GPIO -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">Hardware / GPIO</div>
+        <form id="form-gpio" class="settings-form">
+          <div id="pinout-container" class="pinout-container" aria-live="polite"></div>
+          <div class="settings-row">
+            <label class="checkbox-label"><input type="checkbox" id="gpio-invert-relay"> Invert relay (active-low)</label>
+            <button type="submit" class="btn-small btn-primary">Save GPIO</button>
+          </div>
+          <div id="gpio-restart-banner" class="settings-banner hidden">
+            GPIO changes saved. Restart required: <code>sudo systemctl restart piweathercontrol</code>
+          </div>
+        </form>
+      </section>
 
-    <!-- HA Settings (collapsible) -->
-    <details class="card wide-card">
-      <summary class="card-header">Home Assistant Settings</summary>
-      <div class="settings-row">
-        <label>URL: <input type="text" id="ha-url" placeholder="http://homeassistant.local:8123"></label>
-        <label>Token: <input type="password" id="ha-token" placeholder="Long-lived access token"></label>
-        <label>Temp Entity: <input type="text" id="ha-temp-entity" placeholder="sensor.outside_temperature"></label>
-        <label>Humidity Entity: <input type="text" id="ha-humid-entity" placeholder="sensor.outside_humidity"></label>
-        <button id="ha-save-btn" class="btn-small btn-primary">Save</button>
-        <button id="ha-test-btn" class="btn-small">Test</button>
-      </div>
-    </details>
+      <!-- 2. Fan control -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">Fan Control</div>
+        <form id="form-fan" class="settings-form">
+          <div class="settings-row">
+            <label>Threshold: <input type="number" id="set-fan-threshold" min="20" max="90" step="1">&deg;C</label>
+            <label>Hysteresis: <input type="number" id="set-fan-hysteresis" min="0" max="20" step="1">&deg;C</label>
+            <label>Min ON: <input type="number" id="set-fan-min-on" min="0" max="600" step="10">s</label>
+            <label>Min OFF: <input type="number" id="set-fan-min-off" min="0" max="600" step="10">s</label>
+          </div>
+          <div class="settings-row fan-sources">
+            <label><input type="checkbox" id="set-src-cpu"> CPU source</label>
+            <label><input type="checkbox" id="set-src-ssd"> SSD source</label>
+            <label><input type="checkbox" id="set-src-enclosure"> Enclosure source</label>
+            <button type="submit" class="btn-small btn-primary">Save Fan</button>
+          </div>
+        </form>
+      </section>
 
-    <!-- Event Log -->
-    <section class="card wide-card">
-      <div class="card-header">Event Log</div>
-      <div id="event-log" class="event-log"></div>
+      <!-- 3. Dew heater control -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">Dew Heater Control</div>
+        <form id="form-heater" class="settings-form">
+          <div class="settings-row">
+            <label>Dew Margin: <input type="number" id="set-dew-margin" min="0" max="20" step="0.5">&deg;C</label>
+            <label>Frost Threshold: <input type="number" id="set-outside-threshold" min="-20" max="20" step="0.5">&deg;C</label>
+            <label>Hysteresis: <input type="number" id="set-heater-hysteresis" min="0" max="10" step="0.5">&deg;C</label>
+            <label>Min ON: <input type="number" id="set-heater-min-on" min="0" max="600" step="10">s</label>
+            <label>Min OFF: <input type="number" id="set-heater-min-off" min="0" max="600" step="10">s</label>
+            <label class="checkbox-label"><input type="checkbox" id="set-fan-off-when-heating"> Fan off when heating</label>
+            <button type="submit" class="btn-small btn-primary">Save Heater</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 4. Home Assistant integration -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">Home Assistant Integration</div>
+        <form id="form-ha" class="settings-form">
+          <div class="settings-row">
+            <label>URL: <input type="text" id="set-ha-url" placeholder="http://homeassistant.local:8123"></label>
+            <label>Token: <input type="password" id="set-ha-token" placeholder="Long-lived access token"></label>
+            <label>Temp Entity: <input type="text" id="set-ha-temp-entity" placeholder="sensor.outside_temperature"></label>
+            <label>Humidity Entity: <input type="text" id="set-ha-humid-entity" placeholder="sensor.outside_humidity"></label>
+            <button type="submit" class="btn-small btn-primary">Save HA</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 5. AllSky integration -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">AllSky Integration</div>
+        <form id="form-allsky" class="settings-form">
+          <div class="settings-row">
+            <label class="checkbox-label"><input type="checkbox" id="set-allsky-enabled"> Enable AllSky overlay writer</label>
+            <label>Output dir: <input type="text" id="set-allsky-output-dir" placeholder="/home/pi/allsky/config/overlay/extra"></label>
+            <button type="submit" class="btn-small btn-primary">Save AllSky</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 6. System -->
+      <section class="card wide-card settings-card">
+        <div class="card-header">System</div>
+        <form id="form-system" class="settings-form">
+          <div class="settings-row">
+            <label>I2C bus: <input type="number" id="set-i2c-bus" min="0" max="7" step="1"></label>
+            <label>Poll interval: <input type="number" id="set-poll-interval" min="2" max="120" step="1">s</label>
+            <button type="submit" class="btn-small btn-primary">Save System</button>
+          </div>
+          <div class="settings-row settings-readonly">
+            <span>BME280 address: <code>0x77</code> (hardcoded in sensors.py)</span>
+            <span>INA260 address: <code>0x40</code> (hardcoded in sensors.py)</span>
+          </div>
+        </form>
+      </section>
+
     </section>
   </main>
 
-  <script src="/static/app.js"></script>
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>
