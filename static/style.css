@@ -823,44 +823,32 @@ circle.pin[tabindex="0"]:focus {
   color: #fff;
 }
 
-/* ===== GPIO card two-column layout ===== */
-.gpio-two-col {
+/* ===== Settings page two-column layout ===== */
+#settings {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 24px;
+  grid-template-columns: minmax(300px, 360px) 1fr;
+  gap: 16px;
   align-items: start;
 }
 
-.gpio-two-col .pinout-container {
-  padding: 4px 0;
-  max-height: 560px;
-  overflow-y: auto;
-}
-
-.gpio-two-col .pinout-svg {
-  width: 100%;
-  max-width: 220px;
-  height: auto;
-}
-
-.gpio-two-col .pinout-header-info {
-  font-size: 0.8em;
-}
-
-.gpio-controls {
+.settings-left,
+.settings-right {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  align-items: flex-start;
-  padding-top: 4px;
+  gap: 16px;
+  min-width: 0;
 }
 
-.gpio-controls .checkbox-label {
-  font-size: 0.95em;
+.settings-left .settings-card {
+  margin-bottom: 0;
 }
 
-@media (max-width: 800px) {
-  .gpio-two-col {
+.settings-right .settings-card {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  #settings {
     grid-template-columns: 1fr;
   }
 }

@@ -187,21 +187,24 @@
 
     <section id="settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings">
 
+      <div class="settings-left">
       <!-- 1. Hardware / GPIO -->
       <section class="card wide-card settings-card">
         <div class="card-header">Hardware / GPIO</div>
-        <form id="form-gpio" class="settings-form gpio-two-col">
+        <form id="form-gpio" class="settings-form">
           <div id="pinout-container" class="pinout-container" aria-live="polite"></div>
-          <div class="gpio-controls">
+          <div class="settings-row">
             <label class="checkbox-label"><input type="checkbox" id="gpio-invert-relay"> Invert relay (active-low)</label>
             <button type="submit" class="btn-small btn-primary">Save GPIO</button>
-            <div id="gpio-restart-banner" class="settings-banner hidden">
-              GPIO changes saved. Restart required: <code>sudo systemctl restart piweathercontrol</code>
-            </div>
+          </div>
+          <div id="gpio-restart-banner" class="settings-banner hidden">
+            GPIO changes saved. Restart required: <code>sudo systemctl restart piweathercontrol</code>
           </div>
         </form>
       </section>
+      </div>
 
+      <div class="settings-right">
       <!-- 2. Fan control -->
       <section class="card wide-card settings-card">
         <div class="card-header">Fan Control</div>
@@ -278,6 +281,7 @@
           </div>
         </form>
       </section>
+      </div>
 
     </section>
   </main>
