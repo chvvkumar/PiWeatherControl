@@ -826,21 +826,25 @@ circle.pin[tabindex="0"]:focus {
 /* ===== GPIO card two-column layout ===== */
 .gpio-two-col {
   display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
+  grid-template-columns: 260px 1fr;
   gap: 24px;
   align-items: start;
 }
 
 .gpio-two-col .pinout-container {
-  padding: 8px 0;
-  max-height: 70vh;
+  padding: 4px 0;
+  max-height: 560px;
   overflow-y: auto;
 }
 
 .gpio-two-col .pinout-svg {
   width: 100%;
-  max-width: 320px;
+  max-width: 220px;
   height: auto;
+}
+
+.gpio-two-col .pinout-header-info {
+  font-size: 0.8em;
 }
 
 .gpio-controls {
@@ -848,7 +852,7 @@ circle.pin[tabindex="0"]:focus {
   flex-direction: column;
   gap: 14px;
   align-items: flex-start;
-  padding-top: 8px;
+  padding-top: 4px;
 }
 
 .gpio-controls .checkbox-label {

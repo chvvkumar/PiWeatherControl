@@ -1,11 +1,11 @@
 // Renders the 40-pin Raspberry Pi header as an SVG and manages pin assignments
 // to named devices (fan, heater). No framework; mounts into a container element.
 
-const PIN_RADIUS = 12;
-const PIN_SPACING_X = 48;
-const PIN_SPACING_Y = 32;
-const PADDING = 28;
-const LABEL_WIDTH = 64; // room for "GPIO 22" + "FAN"/"HEATER" badge on each side
+const PIN_RADIUS = 9;
+const PIN_SPACING_X = 36;
+const PIN_SPACING_Y = 22;
+const PADDING = 18;
+const LABEL_WIDTH = 60; // room for "GPIO 22" + "FAN"/"HEATER" badge on each side
 
 const TYPE_CLASS = {
   "3v3": "pin pin-3v3",
