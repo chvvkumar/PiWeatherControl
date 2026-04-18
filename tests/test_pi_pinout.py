@@ -62,3 +62,62 @@ def test_detect_model_unknown_string(tmp_path, monkeypatch):
     family, name = pi_pinout.detect_model()
     assert family == "unknown"
     assert name == "Some Other Board"
+
+
+def test_get_layout_pi5_shape(monkeypatch):
+    monkeypatch.setattr(pi_pinout, "detect_model", lambda: ("pi5", "Raspberry Pi 5 Model B"))
+    layout = pi_pinout.get_layout(i2c_bus=1)
+    assert layout["family"] == "pi5"
+    assert layout["model"] == "Raspberry Pi 5 Model B"
+    assert isinstance(layout["pins"], list)
+    assert len(layout["pins"]) == 40
+    by_phys = {p["physical_pin"]: p for p in layout["pins"]}
+    # Physical 1 is 3V3 on every standard 40-pin Pi.
+    assert by_phys[1]["type"] == "3v3"
+    # Physical 2 and 4 are 5V.
+    assert by_phys[2]["type"] == "5v"
+    assert by_phys[4]["type"] == "5v"
+    # Physical 6 is GND.
+    assert by_phys[6]["type"] == "gnd"
+    # Physical 38 is BCM 20 (default fan pin).
+    assert by_phys[38]["bcm"] == 20
+    assert by_phys[38]["type"] == "gpio"
+
+
+def test_get_layout_marks_i2c_reserved_when_bus_1(monkeypatch):
+    monkeypatch.setattr(pi_pinout, "detect_model", lambda: ("pi5", "Raspberry Pi 5 Model B"))
+    layout = pi_pinout.get_layout(i2c_bus=1)
+    by_bcm = {p["bcm"]: p for p in layout["pins"] if p["bcm"] is not None}
+    assert by_bcm[2]["reserved"] is True
+    assert by_bcm[3]["reserved"] is True
+    assert "i2c" in by_bcm[2]["reserved_reason"].lower()
+
+
+def test_get_layout_i2c_not_reserved_when_bus_0(monkeypatch):
+    monkeypatch.setattr(pi_pinout, "detect_model", lambda: ("pi5", "Raspberry Pi 5 Model B"))
+    layout = pi_pinout.get_layout(i2c_bus=0)
+    by_bcm = {p["bcm"]: p for p in layout["pins"] if p["bcm"] is not None}
+    assert by_bcm[2]["reserved"] is False
+    assert by_bcm[3]["reserved"] is False
+
+
+def test_get_layout_unknown_family_falls_back_to_pi5(monkeypatch):
+    monkeypatch.setattr(pi_pinout, "detect_model", lambda: ("unknown", "Some Other Board"))
+    layout = pi_pinout.get_layout(i2c_bus=1)
+    assert layout["family"] == "unknown"
+    assert layout["model"] == "Some Other Board"
+    # Fallback still provides 40 pins (pi5 layout).
+    assert len(layout["pins"]) == 40
+    assert layout["warning"] is not None
+
+
+def test_get_layout_has_usable_gpios(monkeypatch):
+    monkeypatch.setattr(pi_pinout, "detect_model", lambda: ("pi5", "Raspberry Pi 5 Model B"))
+    layout = pi_pinout.get_layout(i2c_bus=1)
+    gpios = [p for p in layout["pins"] if p["type"] == "gpio"]
+    # 40-pin Pis expose 28 GPIO pins on the header (including BCM 0/1 reserved for HAT ID EEPROM).
+    assert len(gpios) == 28
+    bcms = {p["bcm"] for p in gpios}
+    # Common user pins must be present.
+    for bcm in (4, 17, 18, 20, 21, 22, 23, 24, 25, 27):
+        assert bcm in bcms
