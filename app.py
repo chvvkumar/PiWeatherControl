@@ -529,6 +529,7 @@ class ConfigUpdate(BaseModel):
     heater: Optional[dict] = None
     gpio: Optional[dict] = None  # note: GPIO pin changes require restart
     ha: Optional[dict] = None
+    allsky: Optional[dict] = None
     i2c_bus: Optional[int] = None
     poll_interval: Optional[int] = None
 

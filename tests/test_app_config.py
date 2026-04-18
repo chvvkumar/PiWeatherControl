@@ -61,3 +61,11 @@ def test_post_config_rejects_power_pin_via_physical_only(client):
     resp = client.post("/api/config", json={"gpio": {"fan_pin": None, "heater_pin": 21, "invert_relay": True}})
     # Pydantic-level rejection (422) or our own 400 are both acceptable; just make sure it doesn't crash or save.
     assert resp.status_code in (400, 422)
+
+
+def test_post_config_accepts_allsky_update(client):
+    resp = client.post("/api/config", json={"allsky": {"enabled": False, "output_dir": "/tmp/allsky"}})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["allsky"]["enabled"] is False
+    assert body["allsky"]["output_dir"] == "/tmp/allsky"
