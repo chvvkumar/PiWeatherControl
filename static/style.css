@@ -576,3 +576,249 @@ details[open] summary::before {
   .graph-row { grid-template-columns: 1fr; }
   .dew-indicators { flex-direction: column; }
 }
+
+/* ===== Tab bar ===== */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-left: 20px;
+  flex: 1;
+}
+
+.tab-btn {
+  background: transparent;
+  color: var(--text-dim, #9ca3af);
+  border: 1px solid transparent;
+  padding: 6px 16px;
+  border-radius: 8px 8px 0 0;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+
+.tab-btn:hover {
+  color: var(--text, #e5e7eb);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tab-btn.active {
+  color: var(--text, #e5e7eb);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid transparent;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* ===== Settings panel ===== */
+.settings-card {
+  margin-bottom: 16px;
+}
+
+.settings-form .settings-row {
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.settings-readonly {
+  font-size: 0.85em;
+  color: var(--text-dim, #9ca3af);
+}
+
+.settings-readonly code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.settings-banner {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(250, 200, 80, 0.12);
+  border: 1px solid rgba(250, 200, 80, 0.35);
+  color: #f8d57e;
+  border-radius: 8px;
+  font-size: 0.9em;
+}
+
+.settings-banner.hidden {
+  display: none;
+}
+
+.settings-banner code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ===== Pinout component ===== */
+.pinout-container {
+  position: relative;
+  padding: 20px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pinout-header-info {
+  color: var(--text-dim, #9ca3af);
+  font-size: 0.9em;
+}
+
+.pinout-warning {
+  color: #f8d57e;
+  background: rgba(250, 200, 80, 0.12);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.pinout-svg {
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+}
+
+.pinout-board {
+  fill: rgba(40, 45, 55, 0.6);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.pinout-pin1-indicator {
+  fill: none;
+  stroke: #f8d57e;
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
+.pin {
+  stroke: rgba(0, 0, 0, 0.4);
+  stroke-width: 1;
+  cursor: default;
+  transition: filter 120ms, stroke 120ms;
+}
+
+.pin-3v3 { fill: #f4b35b; }
+.pin-5v { fill: #d9534f; }
+.pin-gnd { fill: #6b7280; }
+.pin-gpio { fill: #4ade80; }
+
+.pin-assigned {
+  fill: #f8d57e !important;
+  stroke: #f8d57e;
+  stroke-width: 2;
+}
+
+.pin-reserved {
+  fill: #4ade80;
+  stroke: #60a5fa;
+  stroke-width: 2;
+  opacity: 0.85;
+}
+
+circle.pin[tabindex="0"] { cursor: pointer; }
+circle.pin[tabindex="0"]:hover,
+circle.pin[tabindex="0"]:focus {
+  filter: brightness(1.2);
+  outline: none;
+}
+
+.pin-number {
+  fill: rgba(0, 0, 0, 0.8);
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.pin-bcm-label {
+  fill: var(--text-dim, #9ca3af);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+.pin-device-badge {
+  fill: #f8d57e;
+  font-size: 9px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.pinout-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 0.8em;
+  color: var(--text-dim, #9ca3af);
+}
+
+.pinout-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pinout-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.pinout-popover {
+  background: rgba(22, 26, 34, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+}
+
+.pinout-popover-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.pinout-popover-select {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.pinout-popover-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.pinout-popover-apply,
+.pinout-popover-cancel {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  cursor: pointer;
+}
+
+.pinout-popover-apply {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
