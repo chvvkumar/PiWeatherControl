@@ -839,7 +839,7 @@ circle.pin[tabindex="0"]:focus {
 }
 
 /* ===== Settings page two-column layout ===== */
-#settings {
+#settings.active {
   display: grid;
   grid-template-columns: minmax(420px, 500px) 1fr;
   gap: 16px;
@@ -869,7 +869,7 @@ circle.pin[tabindex="0"]:focus {
 }
 
 @media (max-width: 900px) {
-  #settings {
+  #settings.active {
     grid-template-columns: 1fr;
   }
 }
