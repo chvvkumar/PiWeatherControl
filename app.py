@@ -533,10 +533,46 @@ class ConfigUpdate(BaseModel):
     poll_interval: Optional[int] = None
 
 
+def _validate_gpio_update(gpio_update: dict, current_gpio: dict, i2c_bus: int) -> Optional[str]:
+    """Return an error message if gpio_update is invalid, else None.
+
+    Accepts a partial gpio dict (any of fan_pin, heater_pin, invert_relay). Validates
+    BCM numbers against the detected Pi layout and rejects I2C-reserved pins and
+    collisions where fan_pin == heater_pin after the update is applied.
+    """
+    layout = pi_pinout.get_layout(i2c_bus)
+    valid_bcms = {p["bcm"]: p for p in layout["pins"] if p["bcm"] is not None and p["type"] == "gpio"}
+
+    merged = {**current_gpio, **gpio_update}
+    fan_pin = merged.get("fan_pin")
+    heater_pin = merged.get("heater_pin")
+
+    for label, pin in (("fan_pin", fan_pin), ("heater_pin", heater_pin)):
+        if pin is None or not isinstance(pin, int):
+            return f"{label} must be an integer BCM GPIO number"
+        if pin not in valid_bcms:
+            return f"{label}={pin} is not a usable BCM GPIO on this Pi"
+        info = valid_bcms[pin]
+        if info["reserved"]:
+            return f"{label}={pin} is reserved: {info['reserved_reason']}"
+
+    if fan_pin == heater_pin:
+        return f"fan_pin and heater_pin cannot be the same (both {fan_pin})"
+
+    return None
+
+
 @app.post("/api/config")
 async def post_config(body: ConfigUpdate):
     global config
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
+
+    if "gpio" in updates:
+        i2c_bus = updates.get("i2c_bus", config.get("i2c_bus", 1))
+        error = _validate_gpio_update(updates["gpio"], config.get("gpio", {}), i2c_bus)
+        if error is not None:
+            return JSONResponse({"detail": error}, 400)
+
     config = update_config(updates)
     _log_event(f"Config updated: {list(updates.keys())}")
     if latest_snapshot:
