@@ -20,6 +20,7 @@ from typing import Optional
 from config import load_config, update_config, save_config
 from sensors import read_all_sensors, init_i2c_sensors, SensorSnapshot
 from gpio_control import GPIOController
+import pi_pinout
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -516,6 +517,11 @@ async def get_status():
 @app.get("/api/config")
 async def get_config():
     return config
+
+
+@app.get("/api/pi-info")
+async def get_pi_info():
+    return pi_pinout.get_layout(config.get("i2c_bus", 1))
 
 
 class ConfigUpdate(BaseModel):

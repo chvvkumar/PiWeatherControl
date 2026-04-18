@@ -1,6 +1,7 @@
 """Shared test fixtures for PiWeatherControl."""
 import copy
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,7 @@ def client(tmp_config, monkeypatch):
     import app as app_module
 
     # Replace the lifespan so tests do not spin up the asyncio control loop or real GPIO.
+    @asynccontextmanager
     async def _noop_lifespan(app):
         yield
 
