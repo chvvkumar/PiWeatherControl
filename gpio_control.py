@@ -48,9 +48,15 @@ class RelayState:
 class GPIOController:
     """Manages GPIO output pins for relays."""
 
-    def __init__(self, fan_pin: int = 20, heater_pin: int = 21, invert: bool = True):
-        self.fan = RelayState("fan", fan_pin, invert)
-        self.heater = RelayState("heater", heater_pin, invert)
+    def __init__(
+        self,
+        fan_pin: int = 20,
+        heater_pin: int = 21,
+        fan_invert: bool = True,
+        heater_invert: bool = True,
+    ):
+        self.fan = RelayState("fan", fan_pin, fan_invert)
+        self.heater = RelayState("heater", heater_pin, heater_invert)
         self._hw_available = _lgpio is not None
         self._chip = None
         self._initialized = False
@@ -68,8 +74,8 @@ class GPIOController:
                     relay.last_change_time = time.time()
                 self._initialized = True
                 log.info(
-                    f"GPIO initialized: fan=pin{self.fan.pin}, "
-                    f"heater=pin{self.heater.pin}, invert={self.fan.invert}"
+                    f"GPIO initialized: fan=pin{self.fan.pin} (invert={self.fan.invert}), "
+                    f"heater=pin{self.heater.pin} (invert={self.heater.invert})"
                 )
             except Exception as e:
                 log.error(f"GPIO init failed: {e}")

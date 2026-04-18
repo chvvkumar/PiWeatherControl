@@ -899,7 +899,10 @@ async function _loadSettingsPanel() {
 }
 
 function _populateSettingsForms(cfg) {
-  document.getElementById('gpio-invert-relay').checked = !!cfg.gpio.invert_relay;
+  const fanInvert = cfg.gpio.fan_invert ?? cfg.gpio.invert_relay ?? true;
+  const heaterInvert = cfg.gpio.heater_invert ?? cfg.gpio.invert_relay ?? true;
+  document.getElementById('gpio-fan-invert').checked = !!fanInvert;
+  document.getElementById('gpio-heater-invert').checked = !!heaterInvert;
 
   document.getElementById('set-fan-threshold').value = cfg.fan.threshold;
   document.getElementById('set-fan-hysteresis').value = cfg.fan.hysteresis;
@@ -950,7 +953,8 @@ function _wireSettingsForms() {
       gpio: {
         fan_pin: fan,
         heater_pin: heater,
-        invert_relay: document.getElementById('gpio-invert-relay').checked,
+        fan_invert: document.getElementById('gpio-fan-invert').checked,
+        heater_invert: document.getElementById('gpio-heater-invert').checked,
       },
     };
     const updated = await _postConfig(body);

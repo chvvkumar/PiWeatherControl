@@ -38,7 +38,8 @@ config = load_config()
 gpio = GPIOController(
     fan_pin=config["gpio"]["fan_pin"],
     heater_pin=config["gpio"]["heater_pin"],
-    invert=config["gpio"]["invert_relay"],
+    fan_invert=config["gpio"].get("fan_invert", config["gpio"].get("invert_relay", True)),
+    heater_invert=config["gpio"].get("heater_invert", config["gpio"].get("invert_relay", True)),
 )
 
 # Ring buffer for history: ~2 hours at 10s intervals

@@ -194,7 +194,10 @@
         <form id="form-gpio" class="settings-form">
           <div id="pinout-container" class="pinout-container" aria-live="polite"></div>
           <div class="settings-row">
-            <label class="checkbox-label"><input type="checkbox" id="gpio-invert-relay"> Invert relay (active-low)</label>
+            <label class="checkbox-label"><input type="checkbox" id="gpio-fan-invert"> Fan invert (active-low)</label>
+            <label class="checkbox-label"><input type="checkbox" id="gpio-heater-invert"> Heater invert (active-low)</label>
+          </div>
+          <div class="settings-row">
             <button type="submit" class="btn-small btn-primary">Save GPIO</button>
           </div>
           <div id="gpio-restart-banner" class="settings-banner hidden">

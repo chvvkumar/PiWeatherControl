@@ -774,6 +774,21 @@ circle.pin[tabindex="0"]:focus {
   height: 12px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.3);
+  background: transparent;
+}
+
+.pinout-legend-swatch.pin-3v3 { background: #f4b35b; }
+.pinout-legend-swatch.pin-5v { background: #d9534f; }
+.pinout-legend-swatch.pin-gnd { background: #6b7280; }
+.pinout-legend-swatch.pin-gpio { background: #4ade80; }
+.pinout-legend-swatch.pin-assigned {
+  background: #f8d57e;
+  border-color: #f8d57e;
+  box-shadow: 0 0 0 1px #f8d57e;
+}
+.pinout-legend-swatch.pin-reserved {
+  background: #4ade80;
+  border: 2px solid #60a5fa;
 }
 
 .pinout-popover {

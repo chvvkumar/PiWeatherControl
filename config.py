@@ -28,7 +28,8 @@ DEFAULT_CONFIG = {
     "gpio": {
         "fan_pin": 20,
         "heater_pin": 21,
-        "invert_relay": True,
+        "fan_invert": True,
+        "heater_invert": True,
     },
     "ha": {
         "url": "",
