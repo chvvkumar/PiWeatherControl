@@ -351,6 +351,22 @@ def _throttle_summary(bits: int) -> str:
 # ---------------------------------------------------------------------------
 # Allsky overlay JSON writer
 # ---------------------------------------------------------------------------
+def _atomic_write_json(path: Path, data: dict) -> None:
+    """Write JSON to ``path`` atomically.
+
+    Allsky's overlay loader and ``allsky_publishdata`` poll these files on
+    every capture cycle. A plain ``Path.write_text`` truncates the file
+    before writing, which leaves a brief window where readers see a
+    zero-byte file and raise ``json.JSONDecodeError`` ("is invalid -
+    IGNORING"). Writing to a sibling ``*.tmp`` and renaming via
+    ``Path.replace`` is atomic on POSIX, so readers always see either the
+    previous full file or the new one.
+    """
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=4) + "\n")
+    tmp.replace(path)
+
+
 def write_allsky_files(snapshot: SensorSnapshot, cfg: dict) -> None:
     """Write allskydew.json and allskyfans.json for the Allsky overlay system."""
     allsky_cfg = cfg.get("allsky", {})
@@ -410,26 +426,22 @@ def write_allsky_files(snapshot: SensorSnapshot, cfg: dict) -> None:
     pi_data = _collect_pi_status(snapshot)
 
     try:
-        temp_path = output_dir / "allskytemp.json"
-        temp_path.write_text(json.dumps(temp_data, indent=4) + "\n")
+        _atomic_write_json(output_dir / "allskytemp.json", temp_data)
     except Exception as e:
         log.warning(f"Failed to write allskytemp.json: {e}")
 
     try:
-        pi_path = output_dir / "pistatus.json"
-        pi_path.write_text(json.dumps(pi_data, indent=4) + "\n")
+        _atomic_write_json(output_dir / "pistatus.json", pi_data)
     except Exception as e:
         log.warning(f"Failed to write pistatus.json: {e}")
 
     try:
-        dew_path = output_dir / "allskydew.json"
-        dew_path.write_text(json.dumps(dew_data, indent=4) + "\n")
+        _atomic_write_json(output_dir / "allskydew.json", dew_data)
     except Exception as e:
         log.warning(f"Failed to write allskydew.json: {e}")
 
     try:
-        fan_path = output_dir / "allskyfans.json"
-        fan_path.write_text(json.dumps(fan_data, indent=4) + "\n")
+        _atomic_write_json(output_dir / "allskyfans.json", fan_data)
     except Exception as e:
         log.warning(f"Failed to write allskyfans.json: {e}")
 
