@@ -96,6 +96,10 @@ function updateSensors(s) {
   $('#ssd-temp').textContent = ssd != null ? ssd.toFixed(1) : '--';
   $('#ssd-temp').className = tempClass(ssd);
 
+  // ── Trend delta pills (CPU and SSD) ──────────────────────────
+  _updateTrendDelta('#cpu-delta', historyData, d => d.system?.cpu, cpu);
+  _updateTrendDelta('#ssd-delta', historyData, d => d.system?.ssd, ssd);
+
   if (s.bme280) {
     const b = s.bme280;
     $('#enc-temp').textContent = b.temperature != null ? b.temperature.toFixed(1) : '--';
@@ -131,8 +135,56 @@ function updateSensors(s) {
     const pf = s.pi_fan;
     $('#pi-fan-rpm').textContent = pf.rpm != null ? pf.rpm : '--';
     $('#pi-fan-pct').textContent = pf.speed_pct != null ? Math.round(pf.speed_pct) : '--';
+
+    // ── Pi fan PWM bar ────────────────────────────────────────
+    const bar = $('#pi-fan-bar');
+    if (bar && pf.speed_pct != null) {
+      bar.style.width = `${Math.round(Math.min(100, Math.max(0, pf.speed_pct)))}%`;
+    }
+
     drawPiFanCurve(s.pi_fan, s.system?.cpu);
   }
+}
+
+// ── Trend delta helper ────────────────────────────────────────────
+// history is sampled every 30 s; 5 min back = ~10 entries
+const TREND_WINDOW_ENTRIES = 10;
+
+function _updateTrendDelta(pillId, history, accessor, currentVal) {
+  const pill = $(pillId);
+  if (!pill) return;
+
+  // Need at least 2 entries and a valid current value
+  if (history.length < 2 || currentVal == null) {
+    pill.textContent = '';
+    pill.className = 'delta flat';
+    return;
+  }
+
+  // Pick the entry closest to 5 min back (index from end = TREND_WINDOW_ENTRIES)
+  const targetIdx = Math.max(0, history.length - 1 - TREND_WINDOW_ENTRIES);
+  const oldEntry = history[targetIdx];
+  const oldVal = oldEntry ? accessor(oldEntry) : null;
+
+  if (oldVal == null) {
+    pill.textContent = '';
+    pill.className = 'delta flat';
+    return;
+  }
+
+  const delta = currentVal - oldVal;
+  const absDelta = Math.abs(delta);
+
+  // Treat changes smaller than 0.05 as flat
+  if (absDelta < 0.05) {
+    pill.textContent = '';
+    pill.className = 'delta flat';
+    return;
+  }
+
+  const sign = delta > 0 ? '+' : '-';
+  pill.textContent = `${sign}${absDelta.toFixed(1)}°`;
+  pill.className = delta > 0 ? 'delta up' : 'delta dn';
 }
 
 // ── Relay display ────────────────────────────────────────────────
@@ -821,13 +873,18 @@ async function poll() {
 // ── Init ─────────────────────────────────────────────────────────
 async function init() {
   await fetchConfig();
+
+  // Settings are on the page at load time — populate and wire immediately
+  await _initSettingsOnLoad();
+
   await fetchStatus();
   await fetchHistory();
   await fetchEvents();
 
   initCurveEditor();
   initModeButtons();
-  initTabs();
+  initAccordionPersistence();
+  initDirtyHints();
 
   // Redraw sparklines on resize (gauges handled by animation loop)
   window.addEventListener('resize', () => {
@@ -851,51 +908,55 @@ async function init() {
 
 document.addEventListener('DOMContentLoaded', init);
 
-// ── Tab switching ────────────────────────────────────────────────
-function initTabs() {
-  const buttons = document.querySelectorAll('.tab-btn');
-  const panels = document.querySelectorAll('.tab-panel');
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.tab;
-      buttons.forEach((b) => {
-        const active = b === btn;
-        b.classList.toggle('active', active);
-        b.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      panels.forEach((p) => {
-        p.classList.toggle('active', p.id === target);
-      });
-      if (target === 'settings') {
-        _loadSettingsPanel();
-      }
+// ── Settings init (single-page: runs once at startup) ────────────
+let _currentConfig = null;
+
+async function _initSettingsOnLoad() {
+  _populateSettingsForms(config);
+  _currentConfig = config;
+
+  const layout = await api('/api/pi-info');
+  if (layout) {
+    const container = document.getElementById('pinout-container');
+    if (container) {
+      initPinout(
+        container,
+        layout,
+        { fan: config.gpio?.fan_pin, heater: config.gpio?.heater_pin },
+        () => {}
+      );
+    }
+  }
+  _wireSettingsForms();
+}
+
+// ── Accordion persistence ─────────────────────────────────────────
+function initAccordionPersistence() {
+  $$('details[data-acc]').forEach(details => {
+    const key = `pwc.acc.${details.dataset.acc}`;
+    // Restore saved state
+    const saved = localStorage.getItem(key);
+    if (saved === 'true') details.open = true;
+    else if (saved === 'false') details.open = false;
+
+    // Persist on toggle
+    details.addEventListener('toggle', () => {
+      localStorage.setItem(key, details.open ? 'true' : 'false');
     });
   });
 }
 
-// ── Settings panel ───────────────────────────────────────────────
-let _settingsLoaded = false;
-let _currentConfig = null;
+// ── Dirty hints ───────────────────────────────────────────────────
+function initDirtyHints() {
+  ['form-fan', 'form-heater', 'form-gpio', 'form-ha', 'form-allsky', 'form-system'].forEach(formId => {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    const hint = form.querySelector('.dirty-hint');
+    if (!hint) return;
 
-async function _loadSettingsPanel() {
-  const cfg = await fetch('/api/config').then((r) => r.json());
-  _currentConfig = cfg;
-  _populateSettingsForms(cfg);
-
-  if (!_settingsLoaded) {
-    const layout = await fetch('/api/pi-info').then((r) => r.json());
-    const container = document.getElementById('pinout-container');
-    initPinout(
-      container,
-      layout,
-      { fan: cfg.gpio.fan_pin, heater: cfg.gpio.heater_pin },
-      () => {}
-    );
-    _wireSettingsForms();
-    _settingsLoaded = true;
-  } else {
-    setAssignments({ fan: cfg.gpio.fan_pin, heater: cfg.gpio.heater_pin });
-  }
+    form.addEventListener('input', () => hint.classList.remove('hidden'));
+    form.addEventListener('change', () => hint.classList.remove('hidden'));
+  });
 }
 
 function _populateSettingsForms(cfg) {
@@ -945,6 +1006,13 @@ async function _postConfig(partial) {
   return resp.json();
 }
 
+function _clearDirtyHint(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  const hint = form.querySelector('.dirty-hint');
+  if (hint) hint.classList.add('hidden');
+}
+
 function _wireSettingsForms() {
   document.getElementById('form-gpio').addEventListener('submit', async (ev) => {
     ev.preventDefault();
@@ -961,6 +1029,7 @@ function _wireSettingsForms() {
     if (updated) {
       _currentConfig = updated;
       document.getElementById('gpio-restart-banner').classList.remove('hidden');
+      _clearDirtyHint('form-gpio');
     }
   });
 
@@ -984,6 +1053,7 @@ function _wireSettingsForms() {
       _currentConfig = updated;
       config = updated;
       if (updated.fan?.threshold != null) fanThreshold = updated.fan.threshold;
+      _clearDirtyHint('form-fan');
     }
   });
 
@@ -1003,6 +1073,7 @@ function _wireSettingsForms() {
     if (updated) {
       _currentConfig = updated;
       config = updated;
+      _clearDirtyHint('form-heater');
     }
   });
 
@@ -1020,6 +1091,7 @@ function _wireSettingsForms() {
     if (updated) {
       _currentConfig = updated;
       config = updated;
+      _clearDirtyHint('form-ha');
     }
   });
 
@@ -1035,6 +1107,7 @@ function _wireSettingsForms() {
     if (updated) {
       _currentConfig = updated;
       config = updated;
+      _clearDirtyHint('form-allsky');
     }
   });
 
@@ -1048,6 +1121,7 @@ function _wireSettingsForms() {
     if (updated) {
       _currentConfig = updated;
       config = updated;
+      _clearDirtyHint('form-system');
     }
   });
 }

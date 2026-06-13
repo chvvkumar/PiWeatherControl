@@ -2,10 +2,15 @@
 // to named devices (fan, heater). No framework; mounts into a container element.
 
 const PIN_RADIUS = 9;
+// Horizontal layout: PIN_SPACING_X separates the 20 columns (left to right),
+// PIN_SPACING_Y separates the 2 rows (top = odd pins, bottom = even pins).
 const PIN_SPACING_X = 36;
-const PIN_SPACING_Y = 22;
+const PIN_SPACING_Y = 36;
 const PADDING = 18;
-const LABEL_WIDTH = 60; // room for "GPIO 22" + "FAN"/"HEATER" badge on each side
+// Vertical room above the top row and below the bottom row for BCM labels and
+// device badges. Badge is staggered further out than the BCM text so they do
+// not overlap each other or the pin-number inside the circle.
+const LABEL_HEIGHT = 34;
 
 const TYPE_CLASS = {
   "3v3": "pin pin-3v3",
@@ -58,9 +63,17 @@ function _render() {
   headerInfo.textContent = `${_layout.model} (${_layout.family})`;
   _rootEl.appendChild(headerInfo);
 
-  const width = PADDING * 2 + PIN_SPACING_X + LABEL_WIDTH * 2;
-  const height = PADDING * 2 + PIN_SPACING_Y * 19;
-  const leftEdge = PADDING + LABEL_WIDTH;
+  // Horizontal layout: 20 columns x 2 rows.
+  // leftEdge: cx of pin in column 0 (physical pins 1 and 2).
+  // topEdge:  cy of the top row (odd pins: 1, 3, 5, ..., 39).
+  // Bottom row cy = topEdge + PIN_SPACING_Y (even pins: 2, 4, 6, ..., 40).
+  const leftEdge = PADDING;
+  const topEdge = PADDING + LABEL_HEIGHT;
+
+  // SVG viewBox spans 20 columns plus horizontal padding, and 2 rows plus
+  // vertical padding and label room above/below.
+  const width = PADDING * 2 + PIN_SPACING_X * 19 + PIN_RADIUS * 2;
+  const height = PADDING * 2 + LABEL_HEIGHT * 2 + PIN_SPACING_Y + PIN_RADIUS * 2;
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("class", "pinout-svg");
@@ -70,35 +83,37 @@ function _render() {
 
   // Header backing rectangle for visual grouping.
   const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  bg.setAttribute("x", leftEdge - PIN_RADIUS - 4);
-  bg.setAttribute("y", PADDING - PIN_RADIUS - 4);
-  bg.setAttribute("width", PIN_SPACING_X + (PIN_RADIUS + 4) * 2);
-  bg.setAttribute("height", PIN_SPACING_Y * 19 + (PIN_RADIUS + 4) * 2);
+  bg.setAttribute("x", String(leftEdge - PIN_RADIUS - 4));
+  bg.setAttribute("y", String(topEdge - PIN_RADIUS - 4));
+  bg.setAttribute("width", String(PIN_SPACING_X * 19 + (PIN_RADIUS + 4) * 2));
+  bg.setAttribute("height", String(PIN_SPACING_Y + (PIN_RADIUS + 4) * 2));
   bg.setAttribute("rx", 10);
   bg.setAttribute("class", "pinout-board");
   svg.appendChild(bg);
 
-  // Pin 1 square corner indicator.
+  // Pin 1 square corner indicator (top-left corner of the board rect).
   const corner = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  corner.setAttribute("x", leftEdge - PIN_RADIUS - 2);
-  corner.setAttribute("y", PADDING - PIN_RADIUS - 2);
-  corner.setAttribute("width", PIN_RADIUS * 2 + 4);
-  corner.setAttribute("height", PIN_RADIUS * 2 + 4);
+  corner.setAttribute("x", String(leftEdge - PIN_RADIUS - 2));
+  corner.setAttribute("y", String(topEdge - PIN_RADIUS - 2));
+  corner.setAttribute("width", String(PIN_RADIUS * 2 + 4));
+  corner.setAttribute("height", String(PIN_RADIUS * 2 + 4));
   corner.setAttribute("class", "pinout-pin1-indicator");
   svg.appendChild(corner);
 
   for (const pin of _layout.pins) {
-    svg.appendChild(_renderPin(pin));
+    svg.appendChild(_renderPin(pin, leftEdge, topEdge));
   }
   _rootEl.appendChild(svg);
   _rootEl.appendChild(_renderLegend());
 }
 
-function _renderPin(pin) {
-  const col = (pin.physical_pin % 2 === 1) ? 0 : 1; // odd -> left
-  const row = Math.floor((pin.physical_pin - 1) / 2);
-  const cx = PADDING + LABEL_WIDTH + col * PIN_SPACING_X;
-  const cy = PADDING + row * PIN_SPACING_Y;
+function _renderPin(pin, leftEdge, topEdge) {
+  // Horizontal layout: colIndex drives x (0..19), rowIndex drives y (0=top, 1=bottom).
+  // Odd physical pins (1, 3, 5, ...) occupy the top row; even pins the bottom row.
+  const colIndex = Math.floor((pin.physical_pin - 1) / 2); // 0..19
+  const rowIndex = (pin.physical_pin % 2 === 1) ? 0 : 1;   // 0=top, 1=bottom
+  const cx = leftEdge + colIndex * PIN_SPACING_X;
+  const cy = topEdge + rowIndex * PIN_SPACING_Y;
 
   const assignedDevice = _deviceAssignedTo(pin.bcm);
   const classes = [TYPE_CLASS[pin.type]];
@@ -153,13 +168,17 @@ function _renderPin(pin) {
   label.textContent = String(pin.physical_pin);
   group.appendChild(label);
 
-  // BCM annotation beside GPIO pins.
+  // BCM annotation: above the circle for top-row pins, below for bottom-row pins.
+  // Device badge is staggered further out so it does not overlap the BCM text.
   if (pin.bcm != null) {
     const bcmLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    const offsetX = col === 0 ? -PIN_RADIUS - 6 : PIN_RADIUS + 6;
-    bcmLabel.setAttribute("x", String(cx + offsetX));
-    bcmLabel.setAttribute("y", String(cy + 4));
-    bcmLabel.setAttribute("text-anchor", col === 0 ? "end" : "start");
+    // top row (rowIndex=0): label above; bottom row (rowIndex=1): label below.
+    const bcmOffsetY = rowIndex === 0
+      ? -(PIN_RADIUS + 8)   // above the circle
+      : PIN_RADIUS + 16;    // below the circle (16 accounts for text baseline)
+    bcmLabel.setAttribute("x", String(cx));
+    bcmLabel.setAttribute("y", String(cy + bcmOffsetY));
+    bcmLabel.setAttribute("text-anchor", "middle");
     bcmLabel.setAttribute("class", "pin-bcm-label");
     bcmLabel.textContent = `GPIO ${pin.bcm}`;
     group.appendChild(bcmLabel);
@@ -167,10 +186,13 @@ function _renderPin(pin) {
 
   if (assignedDevice) {
     const badge = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    const offsetX = col === 0 ? -PIN_RADIUS - 44 : PIN_RADIUS + 44;
-    badge.setAttribute("x", String(cx + offsetX));
-    badge.setAttribute("y", String(cy + 4));
-    badge.setAttribute("text-anchor", col === 0 ? "end" : "start");
+    // Stagger further out beyond the BCM label (additional 14 px).
+    const badgeOffsetY = rowIndex === 0
+      ? -(PIN_RADIUS + 22)  // further above the BCM label
+      : PIN_RADIUS + 30;    // further below the BCM label
+    badge.setAttribute("x", String(cx));
+    badge.setAttribute("y", String(cy + badgeOffsetY));
+    badge.setAttribute("text-anchor", "middle");
     badge.setAttribute("class", "pin-device-badge");
     badge.textContent = assignedDevice.toUpperCase();
     group.appendChild(badge);

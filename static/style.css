@@ -305,19 +305,6 @@ input[type="checkbox"] {
   background: rgba(59, 124, 201, 0.9);
 }
 
-/* Details / collapsible */
-details summary {
-  cursor: pointer;
-  list-style: none;
-}
-details summary::before {
-  content: "\25B6 ";
-  font-size: 0.7rem;
-}
-details[open] summary::before {
-  content: "\25BC ";
-}
-
 /* Event Log */
 .event-log {
   max-height: 200px;
@@ -577,56 +564,57 @@ details[open] summary::before {
   .dew-indicators { flex-direction: column; }
 }
 
-/* ===== Tab bar ===== */
-.tab-bar {
-  display: flex;
-  gap: 4px;
-  margin-left: 20px;
-  flex: 1;
-}
-
-.tab-btn {
-  background: transparent;
-  color: var(--text-dim, #9ca3af);
-  border: 1px solid transparent;
-  padding: 6px 16px;
-  border-radius: 8px 8px 0 0;
-  font: inherit;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 120ms, color 120ms;
-}
-
-.tab-btn:hover {
-  color: var(--text, #e5e7eb);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.tab-btn.active {
-  color: var(--text, #e5e7eb);
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  border-bottom: 1px solid transparent;
-}
-
-.tab-panel {
-  display: none;
-}
-
-.tab-panel.active {
-  display: block;
-}
+/* ===== hidden utility ===== */
+.hidden { display: none; }
 
 /* ===== Settings panel ===== */
 .settings-card {
   margin-bottom: 16px;
 }
 
+.settings-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.settings-form input[type="number"],
+.settings-form input[type="text"],
+.settings-form input[type="password"] {
+  width: 100%;
+}
+
 .settings-form .settings-row {
+  grid-column: 1 / -1;
   gap: 16px;
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* Block-level form children (pinout, restart banner) span the full grid width
+   instead of collapsing into a single auto-fit column. */
+.settings-form > .pinout-container,
+.settings-form > .settings-banner {
+  grid-column: 1 / -1;
+}
+
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.dirty-hint {
+  font-size: 0.75rem;
+  color: var(--orange);
+  grid-column: 1 / -1;
+  align-self: center;
+}
+
+.dirty-hint.hidden { display: none; }
 
 .settings-readonly {
   font-size: 0.85em;
@@ -660,15 +648,6 @@ details[open] summary::before {
 }
 
 /* ===== Pinout component ===== */
-.pinout-container {
-  position: relative;
-  padding: 20px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
 .pinout-header-info {
   color: var(--text-dim, #9ca3af);
   font-size: 0.9em;
@@ -680,12 +659,6 @@ details[open] summary::before {
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.85em;
-}
-
-.pinout-svg {
-  width: 220px;
-  max-width: 100%;
-  height: auto;
 }
 
 .pinout-board {
@@ -838,38 +811,238 @@ circle.pin[tabindex="0"]:focus {
   color: #fff;
 }
 
-/* ===== Settings page two-column layout ===== */
-#settings.active {
+/* ===== Sensor strip (Variant 2) ===== */
+.sensor-strip {
   display: grid;
-  grid-template-columns: minmax(420px, 500px) 1fr;
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.settings-left .pinout-svg {
+.sensor-card {
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 14px;
+  overflow: hidden;
+  min-width: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+.sensor-ico {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.sensor-ico svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sensor-val {
+  font-size: 1.625rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.sensor-unit {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+.sensor-meta {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sensor-meta b,
+.sensor-meta .n {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Trend delta pill */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.delta.up {
+  background: rgba(248, 81, 73, 0.18);
+  color: var(--red);
+}
+
+.delta.dn {
+  background: rgba(63, 185, 80, 0.18);
+  color: var(--green);
+}
+
+.delta.flat {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-dim);
+}
+
+/* PWM progress bar */
+.pwm-bar {
+  height: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.pwm-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--blue);
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+/* ===== Collapsible sections (native <details>) ===== */
+
+/* Generic details — suppress default marker and add rotating chevron */
+details summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details summary::-webkit-details-marker { display: none; }
+
+details summary::after {
+  content: "\203A";
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  margin-left: 6px;
+  transform: rotate(90deg);
+  transition: transform 200ms ease;
+  color: var(--text-dim);
+}
+
+details[open] summary::after {
+  transform: rotate(270deg);
+}
+
+/* Panel-level embedded settings (at bottom of a glass panel) */
+details.panel-settings {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+details.panel-settings > summary {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  user-select: none;
+}
+
+details.panel-settings > summary::before {
+  content: none;
+}
+
+details.panel-settings[open] > summary {
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+/* Bottom accordion card container */
+.acc-card {
+  margin-bottom: 16px;
+}
+
+/* Accordion sections inside the accordion card */
+details.acc-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+details.acc-section:first-child {
+  border-top: none;
+}
+
+details.acc-section > summary {
+  padding: 12px 0;
+  user-select: none;
+}
+
+.acc-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
-  max-width: 340px;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.acc-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-right: 6px;
+}
+
+/* ===== Pinout: horizontal wide layout ===== */
+.pinout-svg {
+  width: 100%;
+  max-width: 900px;
   height: auto;
 }
 
-.settings-left,
-.settings-right {
+.pinout-container {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-width: 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 8px;
 }
 
-.settings-left .settings-card {
-  margin-bottom: 0;
-}
-
-.settings-right .settings-card {
-  margin-bottom: 0;
-}
-
+/* ===== Responsive ===== */
 @media (max-width: 900px) {
-  #settings.active {
-    grid-template-columns: 1fr;
+  .sensor-strip {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .sensor-strip {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
