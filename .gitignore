@@ -12,6 +12,12 @@ env/
 # Local config (user-edited on each host)
 config.json
 
+# Claude Code local settings (per-machine)
+.claude/settings.local.json
+
+# Generated plans/specs
+docs/superpowers/
+
 # OS / editor
 .DS_Store
 Thumbs.db
