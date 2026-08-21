@@ -376,6 +376,17 @@
                 <span class="gps-legend-note">Signal in dB-Hz, filled = used in fix</span>
               </div>
             </div>
+            <div class="gps-drift-wrap">
+              <span class="gps-stat-label" title="Each fix plotted as meters east/north of the session mean position. Dashed ring is CEP50: half of fixes fall inside.">Position drift</span>
+              <svg id="gps-drift" viewBox="0 0 240 240" aria-label="Position drift plot"></svg>
+              <div class="gps-drift-stats">
+                <span>Now</span><b id="gps-drift-now">--</b>
+                <span>RMS</span><b id="gps-drift-rms">--</b>
+                <span>Max</span><b id="gps-drift-max">--</b>
+                <span>CEP50</span><b id="gps-drift-cep">--</b>
+                <span>Samples</span><b id="gps-drift-n">--</b>
+              </div>
+            </div>
           </div>
         </div>
       </details>

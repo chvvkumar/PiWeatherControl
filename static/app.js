@@ -888,6 +888,84 @@ function renderGps(g) {
 
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);
+  recordDrift(g);
+}
+
+// ── Position drift plot ──────────────────────────────────────────
+const DRIFT_WINDOW_MS = 10 * 60 * 1000;
+const _driftFixes = []; // {t, lat, lon} while the panel is open
+
+function recordDrift(g) {
+  if (g.mode >= 2 && g.lat != null && g.lon != null) {
+    const now = Date.now();
+    _driftFixes.push({ t: now, lat: g.lat, lon: g.lon });
+    while (_driftFixes.length && now - _driftFixes[0].t > DRIFT_WINDOW_MS) _driftFixes.shift();
+  }
+  drawDrift();
+}
+
+function drawDrift() {
+  const svg = $('#gps-drift');
+  if (!svg) return;
+  const C = 120, R = 105;
+
+  // mean position -> offsets in meters (equirectangular; fine for meter-scale wander)
+  const n = _driftFixes.length;
+  let pts = [], dists = [], maxD = 0;
+  if (n >= 2) {
+    const mlat = _driftFixes.reduce((a, f) => a + f.lat, 0) / n;
+    const mlon = _driftFixes.reduce((a, f) => a + f.lon, 0) / n;
+    const mLat = 111320, mLon = 111320 * Math.cos(mlat * Math.PI / 180);
+    pts = _driftFixes.map(f => [(f.lon - mlon) * mLon, (f.lat - mlat) * mLat]); // [E, N]
+    dists = pts.map(([x, y]) => Math.hypot(x, y)).sort((a, b) => a - b);
+    maxD = dists[dists.length - 1];
+  }
+
+  // rings: 3 at a step that covers the worst point, min 1 m
+  const step = Math.max(1, Math.ceil(maxD / 3));
+  const edge = 3 * step, S = R / edge;
+
+  let out = '';
+  for (let m = step; m <= edge; m += step) {
+    out += `<circle cx="${C}" cy="${C}" r="${m * S}" fill="none" stroke="rgba(255,255,255,0.10)"/>`;
+    out += `<text x="${C + 3}" y="${C - m * S + 11}" class="gps-sky-label">${m}m</text>`;
+  }
+  out += `<line x1="${C}" y1="${C - R}" x2="${C}" y2="${C + R}" stroke="rgba(255,255,255,0.07)"/>`;
+  out += `<line x1="${C - R}" y1="${C}" x2="${C + R}" y2="${C}" stroke="rgba(255,255,255,0.07)"/>`;
+  out += `<text x="${C}" y="${C - R - 4}" class="gps-sky-label" text-anchor="middle">N</text>`;
+  out += `<text x="${C + R + 8}" y="${C + 4}" class="gps-sky-label" text-anchor="middle">E</text>`;
+
+  const setStat = (id, v) => { $(id).textContent = v; };
+  if (n < 2) {
+    out += `<text x="${C}" y="${C - 10}" class="gps-sky-label" text-anchor="middle">collecting fixes…</text>`;
+    svg.innerHTML = out;
+    ['#gps-drift-now', '#gps-drift-rms', '#gps-drift-max', '#gps-drift-cep'].forEach(id => setStat(id, '--'));
+    setStat('#gps-drift-n', String(n));
+    return;
+  }
+
+  const cep = dists[Math.floor(dists.length / 2)];
+  const rms = Math.sqrt(pts.reduce((a, [x, y]) => a + x * x + y * y, 0) / n);
+
+  out += `<circle cx="${C}" cy="${C}" r="${cep * S}" fill="none" stroke="#d29922" stroke-dasharray="4 3" opacity="0.8"/>`;
+  out += `<polyline points="${pts.map(([x, y]) => `${(C + x * S).toFixed(1)},${(C - y * S).toFixed(1)}`).join(' ')}" fill="none" stroke="rgba(88,166,255,0.18)" stroke-width="1"/>`;
+  pts.forEach(([x, y], i) => {
+    const age = i / (n - 1); // 1 = newest
+    out += `<circle cx="${(C + x * S).toFixed(1)}" cy="${(C - y * S).toFixed(1)}" r="${(1.5 + age * 1.2).toFixed(1)}" fill="rgba(88,166,255,${(0.08 + age * 0.55).toFixed(2)})"/>`;
+  });
+  const [cx, cy] = pts[n - 1];
+  const X = C + cx * S, Y = C - cy * S;
+  out += `<line x1="${(X - 8).toFixed(1)}" y1="${Y.toFixed(1)}" x2="${(X + 8).toFixed(1)}" y2="${Y.toFixed(1)}" stroke="#58a6ff" stroke-width="1.5"/>`;
+  out += `<line x1="${X.toFixed(1)}" y1="${(Y - 8).toFixed(1)}" x2="${X.toFixed(1)}" y2="${(Y + 8).toFixed(1)}" stroke="#58a6ff" stroke-width="1.5"/>`;
+  out += `<circle cx="${X.toFixed(1)}" cy="${Y.toFixed(1)}" r="3.5" fill="#58a6ff"/>`;
+  svg.innerHTML = out;
+
+  const fm = v => v.toFixed(2) + ' m';
+  setStat('#gps-drift-now', fm(Math.hypot(cx, cy)));
+  setStat('#gps-drift-rms', fm(rms));
+  setStat('#gps-drift-max', fm(maxD));
+  setStat('#gps-drift-cep', fm(cep));
+  setStat('#gps-drift-n', `${n} (10 min)`);
 }
 
 function initGpsCopyButtons() {
