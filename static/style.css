@@ -1063,6 +1063,26 @@ details.acc-section > summary {
   white-space: nowrap;
 }
 
+.gps-stat-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gps-copy {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.gps-copy:hover { opacity: 1; color: var(--accent); }
+.gps-copy.copied { opacity: 1; color: var(--green); }
+
 .gps-visuals {
   display: flex;
   gap: 28px;

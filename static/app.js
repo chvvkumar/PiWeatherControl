@@ -871,17 +871,40 @@ function renderGps(g) {
   badge.className = 'badge ' + (g.mode === 3 ? 'ok' : g.mode === 2 ? 'warn' : 'err');
 
   const fmt = (v, dp, unit = '') => v != null ? v.toFixed(dp) + unit : '--';
-  $('#gps-lat').textContent = g.lat != null ? g.lat.toFixed(6) + '°' : '--';
-  $('#gps-lon').textContent = g.lon != null ? g.lon.toFixed(6) + '°' : '--';
-  $('#gps-alt').textContent = fmt(g.alt_msl, 1, ' m');
-  $('#gps-sats').textContent = `${g.sats_used} / ${g.sats_visible}`;
-  $('#gps-dop').textContent = g.hdop != null ? `${g.hdop.toFixed(2)} / ${g.vdop?.toFixed(2) ?? '--'}` : '--';
-  $('#gps-err').textContent = g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--';
-  $('#gps-speed').textContent = fmt(g.speed, 2, ' m/s');
-  $('#gps-time').textContent = g.time ? g.time.slice(11, 19) : '--';
+  // only write when changed — a rewrite of identical text still destroys the user's text selection
+  const setTxt = (sel, text) => { const el = $(sel); if (el.textContent !== text) el.textContent = text; };
+  setTxt('#gps-lat', g.lat != null ? g.lat.toFixed(6) + '°' : '--');
+  setTxt('#gps-lon', g.lon != null ? g.lon.toFixed(6) + '°' : '--');
+  setTxt('#gps-alt', fmt(g.alt_msl, 1, ' m'));
+  setTxt('#gps-sats', `${g.sats_used} / ${g.sats_visible}`);
+  setTxt('#gps-dop', g.hdop != null ? `${g.hdop.toFixed(2)} / ${g.vdop?.toFixed(2) ?? '--'}` : '--');
+  setTxt('#gps-err', g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--');
+  setTxt('#gps-speed', fmt(g.speed, 2, ' m/s'));
+  setTxt('#gps-time', g.time ? g.time.slice(11, 19) : '--');
 
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);
+}
+
+function initGpsCopyButtons() {
+  document.querySelectorAll('.gps-copy').forEach(btn => btn.addEventListener('click', () => {
+    // copy the bare number — strip the ° / m unit
+    const val = $('#' + btn.dataset.copy).textContent.replace(/[°]|\s*m$/g, '').trim();
+    if (val === '--') return;
+    const done = () => { btn.classList.add('copied'); setTimeout(() => btn.classList.remove('copied'), 1000); };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(val).then(done);
+    } else {
+      // http on LAN: no clipboard API outside secure context
+      const ta = document.createElement('textarea');
+      ta.value = val;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    }
+  }));
 }
 
 function drawSkyplot(sats) {
@@ -972,6 +995,7 @@ async function init() {
   // Fetch GPS immediately when its section is expanded
   $('details[data-acc="gps"]')?.addEventListener('toggle', e => { if (e.target.open) fetchGps(); });
   fetchGps();
+  initGpsCopyButtons();
   initDirtyHints();
 
   // Redraw sparklines on resize (gauges handled by animation loop)
