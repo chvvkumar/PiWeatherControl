@@ -1018,6 +1018,122 @@ details.acc-section > summary {
   margin-right: 6px;
 }
 
+/* ===== GPS section ===== */
+.badge.warn { background: rgba(210, 153, 34, 0.2); color: var(--orange); }
+
+.gps-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gps-body {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 20px;
+  padding: 12px 0 16px;
+}
+
+.gps-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gps-metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 6px;
+}
+
+.gps-metric-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.gps-metric-val {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.gps-visuals {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#gps-skyplot {
+  width: 240px;
+  height: 240px;
+  flex-shrink: 0;
+}
+
+.gps-sky-label {
+  font-size: 10px;
+  fill: var(--text-dim);
+}
+
+.gps-sky-prn {
+  font-size: 7px;
+  fill: var(--text-dim);
+}
+
+.gps-snr-wrap {
+  flex: 1;
+  min-width: 260px;
+}
+
+.gps-snr-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 140px;
+}
+
+.gps-snr-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+  max-width: 26px;
+  height: 100%;
+  position: relative;
+}
+
+.gps-snr-fill {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  opacity: 0.45;
+}
+
+.gps-snr-bar.used .gps-snr-fill { opacity: 1; }
+
+.gps-snr-val {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+
+.gps-snr-prn {
+  font-size: 0.62rem;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gps-snr-caption {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+@media (max-width: 700px) {
+  .gps-body { grid-template-columns: 1fr; }
+}
+
 /* ===== Pinout: horizontal wide layout ===== */
 .pinout-svg {
   width: 100%;

@@ -20,6 +20,7 @@ from typing import Optional
 from config import load_config, update_config, save_config
 from sensors import read_all_sensors, init_i2c_sensors, SensorSnapshot
 from gpio_control import GPIOController
+import gps_reader
 import pi_pinout
 
 # ---------------------------------------------------------------------------
@@ -622,6 +623,15 @@ async def set_heater_mode(body: ModeUpdate):
     if latest_snapshot:
         apply_control(latest_snapshot, config)
     return {"heater_mode": body.mode}
+
+
+@app.get("/api/gps")
+async def get_gps():
+    try:
+        raw = await asyncio.to_thread(gps_reader.read_gpsd)
+    except OSError as e:
+        return JSONResponse({"error": f"gpsd unavailable: {e}"}, 503)
+    return gps_reader.summarize(raw)
 
 
 @app.get("/api/history")

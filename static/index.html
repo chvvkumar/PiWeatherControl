@@ -337,6 +337,42 @@
 
     </section>
 
+    <!-- ── GPS (collapsible) ── -->
+    <section class="card acc-card wide-card">
+      <details class="acc-section" data-acc="gps">
+        <summary class="acc-summary">
+          <span class="gps-summary-left">
+            <svg class="panel-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="5"/>
+              <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+            </svg>
+            GPS
+          </span>
+          <span id="gps-fix-badge" class="badge">--</span>
+        </summary>
+        <div class="gps-body">
+          <div class="gps-metrics">
+            <div class="gps-metric"><span class="gps-metric-label">Latitude</span><span class="gps-metric-val" id="gps-lat">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">Longitude</span><span class="gps-metric-val" id="gps-lon">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">Altitude (MSL)</span><span class="gps-metric-val" id="gps-alt">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">Satellites</span><span class="gps-metric-val" id="gps-sats">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">HDOP / VDOP</span><span class="gps-metric-val" id="gps-dop">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">Est. error (h/v)</span><span class="gps-metric-val" id="gps-err">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">Speed</span><span class="gps-metric-val" id="gps-speed">--</span></div>
+            <div class="gps-metric"><span class="gps-metric-label">GPS Time (UTC)</span><span class="gps-metric-val" id="gps-time">--</span></div>
+          </div>
+          <div class="gps-visuals">
+            <svg id="gps-skyplot" viewBox="0 0 240 240" aria-label="Satellite sky plot"></svg>
+            <div class="gps-snr-wrap">
+              <div id="gps-snr-bars" class="gps-snr-bars"></div>
+              <div class="gps-snr-caption">Signal strength (dB-Hz), filled = used in fix</div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </section>
+
     <!-- ── Bottom accordion: Hardware, HA, AllSky, System ── -->
     <section class="card acc-card wide-card">
 

@@ -848,6 +848,96 @@ function initModeButtons() {
   });
 }
 
+// ── GPS ──────────────────────────────────────────────────────────
+const GNSS_COLORS = { GPS: '#58a6ff', GAL: '#3fb950', BDS: '#f85149', GLO: '#d29922', SBAS: '#8b949e', QZSS: '#bc8cff', IRN: '#f778ba', '?': '#8b949e' };
+
+function snrColor(snr, used) {
+  if (!snr) return '#484f58';
+  if (!used) return '#8b949e';
+  if (snr >= 30) return '#3fb950';
+  if (snr >= 20) return '#d29922';
+  return '#f85149';
+}
+
+async function fetchGps() {
+  const det = $('details[data-acc="gps"]');
+  if (!det) return;
+  const badge = $('#gps-fix-badge');
+  if (!det.open) return; // skip polling while collapsed
+  const data = await api('/api/gps');
+  if (!data || data.error) {
+    badge.textContent = 'OFFLINE';
+    badge.className = 'badge err';
+    return;
+  }
+  renderGps(data);
+}
+
+function renderGps(g) {
+  const badge = $('#gps-fix-badge');
+  badge.textContent = g.fix;
+  badge.className = 'badge ' + (g.mode === 3 ? 'ok' : g.mode === 2 ? 'warn' : 'err');
+
+  const fmt = (v, dp, unit = '') => v != null ? v.toFixed(dp) + unit : '--';
+  $('#gps-lat').textContent = g.lat != null ? g.lat.toFixed(6) + '°' : '--';
+  $('#gps-lon').textContent = g.lon != null ? g.lon.toFixed(6) + '°' : '--';
+  $('#gps-alt').textContent = fmt(g.alt_msl, 1, ' m');
+  $('#gps-sats').textContent = `${g.sats_used} / ${g.sats_visible}`;
+  $('#gps-dop').textContent = g.hdop != null ? `${g.hdop.toFixed(2)} / ${g.vdop?.toFixed(2) ?? '--'}` : '--';
+  $('#gps-err').textContent = g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--';
+  $('#gps-speed').textContent = fmt(g.speed, 2, ' m/s');
+  $('#gps-time').textContent = g.time ? g.time.replace('T', ' ').replace(/\.\d+Z$/, 'Z') : '--';
+
+  drawSkyplot(g.satellites);
+  drawSnrBars(g.satellites);
+}
+
+function drawSkyplot(sats) {
+  const svg = $('#gps-skyplot');
+  const C = 120, R = 105;
+  let out = '';
+  // Elevation rings at 0/30/60 deg + crosshairs
+  for (const el of [0, 30, 60]) {
+    out += `<circle cx="${C}" cy="${C}" r="${R * (90 - el) / 90}" fill="none" stroke="rgba(255,255,255,0.12)"/>`;
+  }
+  out += `<line x1="${C}" y1="${C - R}" x2="${C}" y2="${C + R}" stroke="rgba(255,255,255,0.08)"/>`;
+  out += `<line x1="${C - R}" y1="${C}" x2="${C + R}" y2="${C}" stroke="rgba(255,255,255,0.08)"/>`;
+  out += `<text x="${C}" y="${C - R - 4}" class="gps-sky-label" text-anchor="middle">N</text>`;
+  out += `<text x="${C + R + 8}" y="${C + 4}" class="gps-sky-label" text-anchor="middle">E</text>`;
+  out += `<text x="${C}" y="${C + R + 12}" class="gps-sky-label" text-anchor="middle">S</text>`;
+  out += `<text x="${C - R - 8}" y="${C + 4}" class="gps-sky-label" text-anchor="middle">W</text>`;
+
+  for (const s of sats) {
+    if (s.az == null || s.el == null) continue;
+    const rr = R * (90 - s.el) / 90;
+    const a = s.az * Math.PI / 180;
+    const x = C + rr * Math.sin(a);
+    const y = C - rr * Math.cos(a);
+    const color = GNSS_COLORS[s.gnss] || GNSS_COLORS['?'];
+    const fill = s.used ? color : 'none';
+    const op = s.snr ? Math.min(1, 0.35 + s.snr / 40) : 0.35;
+    out += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${fill}" stroke="${color}" stroke-width="1.5" opacity="${op.toFixed(2)}"><title>${s.gnss} ${s.prn} el ${s.el} az ${s.az} snr ${s.snr ?? 0}</title></circle>`;
+    out += `<text x="${x.toFixed(1)}" y="${(y - 7).toFixed(1)}" class="gps-sky-prn" text-anchor="middle">${s.prn}</text>`;
+  }
+  svg.innerHTML = out;
+}
+
+function drawSnrBars(sats) {
+  const wrap = $('#gps-snr-bars');
+  wrap.innerHTML = '';
+  for (const s of sats) {
+    const bar = document.createElement('div');
+    bar.className = 'gps-snr-bar' + (s.used ? ' used' : '');
+    const h = Math.max(2, Math.min(100, (s.snr || 0) / 45 * 100));
+    bar.innerHTML =
+      `<span class="gps-snr-val">${s.snr ? s.snr.toFixed(0) : ''}</span>` +
+      `<span class="gps-snr-fill" style="height:${h}%;background:${snrColor(s.snr, s.used)}"></span>` +
+      `<span class="gps-snr-prn" style="color:${GNSS_COLORS[s.gnss] || '#8b949e'}">${s.prn}</span>`;
+    bar.title = `${s.gnss} ${s.prn}: ${s.snr ?? 0} dB-Hz${s.used ? ' (used)' : ''}`;
+    wrap.appendChild(bar);
+  }
+}
+
 // ── Polling loop ─────────────────────────────────────────────────
 async function poll() {
   const status = await api('/api/status');
@@ -862,6 +952,7 @@ async function poll() {
   }
 
   await fetchEvents();
+  await fetchGps();
 
   // Fetch history less frequently (every 30s)
   if (!poll._histCount) poll._histCount = 0;
@@ -884,6 +975,9 @@ async function init() {
   initCurveEditor();
   initModeButtons();
   initAccordionPersistence();
+  // Fetch GPS immediately when its section is expanded
+  $('details[data-acc="gps"]')?.addEventListener('toggle', e => { if (e.target.open) fetchGps(); });
+  fetchGps();
   initDirtyHints();
 
   // Redraw sparklines on resize (gauges handled by animation loop)
