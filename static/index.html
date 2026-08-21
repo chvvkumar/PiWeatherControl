@@ -364,27 +364,34 @@
             <div class="gps-stat"><span class="gps-stat-label">Time UTC</span><span class="gps-stat-val" id="gps-time">--</span></div>
           </div>
           <div class="gps-visuals">
-            <svg id="gps-skyplot" viewBox="0 0 240 240" aria-label="Satellite sky plot"></svg>
-            <div class="gps-snr-wrap">
-              <div id="gps-snr-bars" class="gps-snr-bars"></div>
-              <div class="gps-legend">
-                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#58a6ff"></span>GPS</span>
-                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>Galileo</span>
-                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#f85149"></span>BeiDou</span>
-                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#d29922"></span>GLONASS</span>
-                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#8b949e"></span>SBAS</span>
-                <span class="gps-legend-note">Signal in dB-Hz, filled = used in fix</span>
-              </div>
+            <div class="gps-viz-col">
+              <span class="gps-stat-label">Sky plot</span>
+              <svg id="gps-skyplot" viewBox="0 0 240 240" aria-label="Satellite sky plot"></svg>
             </div>
-            <div class="gps-drift-wrap">
+            <div class="gps-viz-col gps-snr-wrap">
+              <div class="gps-snr-head">
+                <span class="gps-stat-label" title="Signal in dB-Hz, filled = used in fix">Signal (dB-Hz)</span>
+                <div class="gps-legend">
+                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#58a6ff"></span>GPS</span>
+                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>Galileo</span>
+                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#f85149"></span>BeiDou</span>
+                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#d29922"></span>GLONASS</span>
+                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#8b949e"></span>SBAS</span>
+                </div>
+              </div>
+              <div id="gps-snr-bars" class="gps-snr-bars"></div>
+            </div>
+            <div class="gps-viz-col gps-drift-wrap">
               <span class="gps-stat-label" title="Each fix plotted as meters east/north of the session mean position. Dashed ring is CEP50: half of fixes fall inside.">Position drift</span>
-              <svg id="gps-drift" viewBox="0 0 240 240" aria-label="Position drift plot"></svg>
-              <div class="gps-drift-stats">
-                <span>Now</span><b id="gps-drift-now">--</b>
-                <span>RMS</span><b id="gps-drift-rms">--</b>
-                <span>Max</span><b id="gps-drift-max">--</b>
-                <span>CEP50</span><b id="gps-drift-cep">--</b>
-                <span>Samples</span><b id="gps-drift-n">--</b>
+              <div class="gps-drift-row">
+                <svg id="gps-drift" viewBox="0 0 240 240" aria-label="Position drift plot"></svg>
+                <div class="gps-drift-stats">
+                  <span>Now</span><b id="gps-drift-now">--</b>
+                  <span>RMS</span><b id="gps-drift-rms">--</b>
+                  <span>Max</span><b id="gps-drift-max">--</b>
+                  <span>CEP50</span><b id="gps-drift-cep">--</b>
+                  <span>Samples</span><b id="gps-drift-n">--</b>
+                </div>
               </div>
             </div>
           </div>
