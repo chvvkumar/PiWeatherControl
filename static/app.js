@@ -851,14 +851,6 @@ function initModeButtons() {
 // ── GPS ──────────────────────────────────────────────────────────
 const GNSS_COLORS = { GPS: '#58a6ff', GAL: '#3fb950', BDS: '#f85149', GLO: '#d29922', SBAS: '#8b949e', QZSS: '#bc8cff', IRN: '#f778ba', '?': '#8b949e' };
 
-function snrColor(snr, used) {
-  if (!snr) return '#484f58';
-  if (!used) return '#8b949e';
-  if (snr >= 30) return '#3fb950';
-  if (snr >= 20) return '#d29922';
-  return '#f85149';
-}
-
 async function fetchGps() {
   const det = $('details[data-acc="gps"]');
   if (!det) return;
@@ -933,7 +925,7 @@ function drawSnrBars(sats) {
     const h = Math.max(2, Math.min(100, (s.snr || 0) / 45 * 100));
     bar.innerHTML =
       `<span class="gps-snr-val">${s.snr ? s.snr.toFixed(0) : ''}</span>` +
-      `<span class="gps-snr-fill" style="height:${h}%;background:${snrColor(s.snr, s.used)}"></span>` +
+      `<span class="gps-snr-fill" style="height:${h}%;background:${GNSS_COLORS[s.gnss] || '#8b949e'}"></span>` +
       `<span class="gps-snr-prn" style="color:${GNSS_COLORS[s.gnss] || '#8b949e'}">${s.prn}</span>`;
     bar.title = `${s.gnss} ${s.prn}: ${s.snr ?? 0} dB-Hz${s.used ? ' (used)' : ''}`;
     wrap.appendChild(bar);
