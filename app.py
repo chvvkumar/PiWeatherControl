@@ -663,6 +663,8 @@ def _record_gps_sample(g: dict) -> None:
     gps_history.append({
         "t": round(time.time()), "mode": g["mode"],
         "used": g["sats_used"], "vis": g["sats_visible"], "hdop": g["hdop"],
+        "lat": round(g["lat"], 7) if g["lat"] is not None else None,
+        "lon": round(g["lon"], 7) if g["lon"] is not None else None,
     })
     for s in g["satellites"]:
         if s["az"] is None or s["el"] is None:

@@ -69,6 +69,8 @@ def test_record_gps_sample_bins_and_history(client):
     assert len(app_module.gps_history) == 1
     row = app_module.gps_history[0]
     assert row["used"] == 3 and row["vis"] == 5 and row["mode"] == 3
+    # lat/lon carried in history so the drift plot survives restarts
+    assert "lat" in row and "lon" in row
     # all test sats share az=100 el=45 -> single bin "10,4"
     assert list(app_module._gps_sky.keys()) == ["10,4"]
     seen, used, snr_sum = app_module._gps_sky["10,4"]

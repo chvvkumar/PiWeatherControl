@@ -888,7 +888,6 @@ function renderGps(g) {
 
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);
-  recordDrift(g);
   fetchGpsStats();
 }
 
@@ -903,6 +902,7 @@ async function fetchGpsStats() {
   _gpsStatsLast = now;
   drawSkyCoverage(s.sky, s.history);
   drawGpsTrends(s.history);
+  drawDrift(s.history.filter(r => r.mode >= 2 && r.lat != null && r.lon != null));
 }
 
 function drawSkyCoverage(sky, hist) {
@@ -981,31 +981,21 @@ function drawGpsTrends(hist) {
 }
 
 // ── Position drift plot ──────────────────────────────────────────
-const DRIFT_WINDOW_MS = 10 * 60 * 1000;
-const _driftFixes = []; // {t, lat, lon} while the panel is open
-
-function recordDrift(g) {
-  if (g.mode >= 2 && g.lat != null && g.lon != null) {
-    const now = Date.now();
-    _driftFixes.push({ t: now, lat: g.lat, lon: g.lon });
-    while (_driftFixes.length && now - _driftFixes[0].t > DRIFT_WINDOW_MS) _driftFixes.shift();
-  }
-  drawDrift();
-}
-
-function drawDrift() {
+// Fed from the server's persisted 24h sample history (survives service
+// restarts and page reloads), not a page-local buffer.
+function drawDrift(fixes) {
   const svg = $('#gps-drift');
   if (!svg) return;
   const C = 120, R = 105;
 
   // mean position -> offsets in meters (equirectangular; fine for meter-scale wander)
-  const n = _driftFixes.length;
+  const n = fixes.length;
   let pts = [], dists = [], maxD = 0;
   if (n >= 2) {
-    const mlat = _driftFixes.reduce((a, f) => a + f.lat, 0) / n;
-    const mlon = _driftFixes.reduce((a, f) => a + f.lon, 0) / n;
+    const mlat = fixes.reduce((a, f) => a + f.lat, 0) / n;
+    const mlon = fixes.reduce((a, f) => a + f.lon, 0) / n;
     const mLat = 111320, mLon = 111320 * Math.cos(mlat * Math.PI / 180);
-    pts = _driftFixes.map(f => [(f.lon - mlon) * mLon, (f.lat - mlat) * mLat]); // [E, N]
+    pts = fixes.map(f => [(f.lon - mlon) * mLon, (f.lat - mlat) * mLat]); // [E, N]
     dists = pts.map(([x, y]) => Math.hypot(x, y)).sort((a, b) => a - b);
     maxD = dists[dists.length - 1];
   }
@@ -1054,7 +1044,8 @@ function drawDrift() {
   setStat('#gps-drift-rms', fm(rms));
   setStat('#gps-drift-max', fm(maxD));
   setStat('#gps-drift-cep', fm(cep));
-  setStat('#gps-drift-n', `${n} (10 min)`);
+  const hrs = (fixes[n - 1].t - fixes[0].t) / 3600;
+  setStat('#gps-drift-n', `${n} (${hrs < 1 ? (hrs * 60).toFixed(0) + ' min' : hrs.toFixed(1) + ' h'})`);
 }
 
 function initGpsCopyButtons() {
