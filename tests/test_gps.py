@@ -51,3 +51,28 @@ def test_summarize_no_data():
     assert out["lat"] is None
     assert out["sats_visible"] == 0
     assert out["satellites"] == []
+
+
+def _raw_with_sats(n_used, n_visible):
+    sats = [_sat(i + 1, ss=25.0, used=i < n_used) for i in range(n_visible)]
+    return {"tpv": {"mode": 3}, "sky": {"satellites": sats}}
+
+
+def test_gps_peaks_accumulate(client, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setitem(app_module._gps_peaks, "sats_used", 0)
+    monkeypatch.setitem(app_module._gps_peaks, "sats_visible", 0)
+
+    monkeypatch.setattr(gps_reader, "read_gpsd", lambda: _raw_with_sats(8, 14))
+    body = client.get("/api/gps").json()
+    assert body["max_sats_used"] == 8
+    assert body["max_sats_visible"] == 14
+
+    # Fewer sats now — peaks must hold
+    monkeypatch.setattr(gps_reader, "read_gpsd", lambda: _raw_with_sats(3, 5))
+    body = client.get("/api/gps").json()
+    assert body["sats_used"] == 3
+    assert body["max_sats_used"] == 8
+    assert body["max_sats_visible"] == 14
+    assert body["peaks_since"] > 0

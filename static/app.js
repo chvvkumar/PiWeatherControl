@@ -877,6 +877,10 @@ function renderGps(g) {
   setTxt('#gps-lon', g.lon != null ? g.lon.toFixed(6) + '°' : '--');
   setTxt('#gps-alt', fmt(g.alt_msl, 1, ' m'));
   setTxt('#gps-sats', `${g.sats_used} / ${g.sats_visible}`);
+  setTxt('#gps-sats-max', g.max_sats_used != null ? `${g.max_sats_used} / ${g.max_sats_visible}` : '--');
+  if (g.peaks_since) {
+    $('#gps-sats-max-label').title = `Peak used / visible since ${new Date(g.peaks_since * 1000).toLocaleString()}`;
+  }
   setTxt('#gps-dop', g.hdop != null ? `${g.hdop.toFixed(2)} / ${g.vdop?.toFixed(2) ?? '--'}` : '--');
   setTxt('#gps-err', g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--');
   setTxt('#gps-speed', fmt(g.speed, 2, ' m/s'));

@@ -625,13 +625,22 @@ async def set_heater_mode(body: ModeUpdate):
     return {"heater_mode": body.mode}
 
 
+_gps_peaks = {"sats_used": 0, "sats_visible": 0, "since": time.time()}
+
+
 @app.get("/api/gps")
 async def get_gps():
     try:
         raw = await asyncio.to_thread(gps_reader.read_gpsd)
     except OSError as e:
         return JSONResponse({"error": f"gpsd unavailable: {e}"}, 503)
-    return gps_reader.summarize(raw)
+    data = gps_reader.summarize(raw)
+    _gps_peaks["sats_used"] = max(_gps_peaks["sats_used"], data["sats_used"])
+    _gps_peaks["sats_visible"] = max(_gps_peaks["sats_visible"], data["sats_visible"])
+    data["max_sats_used"] = _gps_peaks["sats_used"]
+    data["max_sats_visible"] = _gps_peaks["sats_visible"]
+    data["peaks_since"] = _gps_peaks["since"]
+    return data
 
 
 @app.get("/api/history")
