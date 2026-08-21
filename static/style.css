@@ -1028,41 +1028,45 @@ details.acc-section > summary {
 }
 
 .gps-body {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 20px;
-  padding: 12px 0 16px;
-}
-
-.gps-metrics {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
+  padding: 14px 0 16px;
 }
 
-.gps-metric {
+.gps-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px 20px;
+}
+
+.gps-stat {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 6px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
-.gps-metric-label {
-  font-size: 0.78rem;
+.gps-stat-label {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-dim);
+  white-space: nowrap;
 }
 
-.gps-metric-val {
-  font-size: 0.82rem;
+.gps-stat-val {
+  font-size: 0.95rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .gps-visuals {
   display: flex;
-  gap: 24px;
-  align-items: center;
-  flex-wrap: wrap;
+  gap: 28px;
+  align-items: stretch;
 }
 
 #gps-skyplot {
@@ -1084,13 +1088,18 @@ details.acc-section > summary {
 .gps-snr-wrap {
   flex: 1;
   min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .gps-snr-bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 140px;
+  gap: 6px;
+  height: 160px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .gps-snr-bar {
@@ -1099,39 +1108,62 @@ details.acc-section > summary {
   justify-content: flex-end;
   align-items: center;
   flex: 1;
-  max-width: 26px;
+  max-width: 44px;
   height: 100%;
   position: relative;
 }
 
 .gps-snr-fill {
   width: 100%;
-  border-radius: 2px 2px 0 0;
-  opacity: 0.45;
+  border-radius: 3px 3px 0 0;
+  opacity: 0.4;
 }
 
 .gps-snr-bar.used .gps-snr-fill { opacity: 1; }
 
 .gps-snr-val {
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  margin-bottom: 2px;
-}
-
-.gps-snr-prn {
   font-size: 0.62rem;
-  margin-top: 3px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
   font-variant-numeric: tabular-nums;
 }
 
-.gps-snr-caption {
+.gps-snr-prn {
+  font-size: 0.64rem;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.gps-legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.gps-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.7rem;
   color: var(--text-dim);
-  margin-top: 8px;
+}
+
+.gps-legend-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.gps-legend-note {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: var(--text-dim);
 }
 
 @media (max-width: 700px) {
-  .gps-body { grid-template-columns: 1fr; }
+  .gps-visuals { flex-direction: column; align-items: center; }
 }
 
 /* ===== Pinout: horizontal wide layout ===== */

@@ -886,7 +886,7 @@ function renderGps(g) {
   $('#gps-dop').textContent = g.hdop != null ? `${g.hdop.toFixed(2)} / ${g.vdop?.toFixed(2) ?? '--'}` : '--';
   $('#gps-err').textContent = g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--';
   $('#gps-speed').textContent = fmt(g.speed, 2, ' m/s');
-  $('#gps-time').textContent = g.time ? g.time.replace('T', ' ').replace(/\.\d+Z$/, 'Z') : '--';
+  $('#gps-time').textContent = g.time ? g.time.slice(11, 19) : '--';
 
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);
@@ -917,7 +917,9 @@ function drawSkyplot(sats) {
     const fill = s.used ? color : 'none';
     const op = s.snr ? Math.min(1, 0.35 + s.snr / 40) : 0.35;
     out += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${fill}" stroke="${color}" stroke-width="1.5" opacity="${op.toFixed(2)}"><title>${s.gnss} ${s.prn} el ${s.el} az ${s.az} snr ${s.snr ?? 0}</title></circle>`;
-    out += `<text x="${x.toFixed(1)}" y="${(y - 7).toFixed(1)}" class="gps-sky-prn" text-anchor="middle">${s.prn}</text>`;
+    if (s.used) {
+      out += `<text x="${x.toFixed(1)}" y="${(y - 7).toFixed(1)}" class="gps-sky-prn" text-anchor="middle">${s.prn}</text>`;
+    }
   }
   svg.innerHTML = out;
 }
