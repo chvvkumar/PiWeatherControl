@@ -352,6 +352,7 @@
           </span>
         </summary>
         <div class="gps-body">
+          <div class="gps-visuals">
           <div class="gps-stats">
             <div class="gps-stat"><span class="gps-stat-label">Satellites</span><span class="gps-stat-val" id="gps-sats">--</span></div>
             <div class="gps-stat"><span class="gps-stat-label" id="gps-sats-max-label" title="Peak used / visible since service start">Peak used / seen</span><span class="gps-stat-val" id="gps-sats-max">--</span></div>
@@ -363,23 +364,20 @@
             <div class="gps-stat"><span class="gps-stat-label">Speed</span><span class="gps-stat-val" id="gps-speed">--</span></div>
             <div class="gps-stat"><span class="gps-stat-label">Time UTC</span><span class="gps-stat-val" id="gps-time">--</span></div>
           </div>
-          <div class="gps-visuals">
             <div class="gps-viz-col">
               <span class="gps-stat-label">Sky plot</span>
               <svg id="gps-skyplot" viewBox="0 0 240 240" aria-label="Satellite sky plot"></svg>
             </div>
             <div class="gps-viz-col gps-snr-wrap">
-              <div class="gps-snr-head">
-                <span class="gps-stat-label" title="Signal in dB-Hz, filled = used in fix">Signal (dB-Hz)</span>
-                <div class="gps-legend">
-                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#58a6ff"></span>GPS</span>
-                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>Galileo</span>
-                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#f85149"></span>BeiDou</span>
-                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#d29922"></span>GLONASS</span>
-                  <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#8b949e"></span>SBAS</span>
-                </div>
-              </div>
+              <span class="gps-stat-label" title="Signal in dB-Hz, filled = used in fix">Signal (dB-Hz)</span>
               <div id="gps-snr-bars" class="gps-snr-bars"></div>
+              <div class="gps-legend">
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#58a6ff"></span>GPS</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>Galileo</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#f85149"></span>BeiDou</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#d29922"></span>GLONASS</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#8b949e"></span>SBAS</span>
+              </div>
             </div>
             <div class="gps-viz-col gps-drift-wrap">
               <span class="gps-stat-label" title="Each fix plotted as meters east/north of the session mean position. Dashed ring is CEP50: half of fixes fall inside.">Position drift</span>

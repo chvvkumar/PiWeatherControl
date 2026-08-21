@@ -1035,16 +1035,21 @@ details.acc-section > summary {
 }
 
 .gps-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-width: 230px;
+  padding-top: 22px; /* line up with the viz columns' label row */
 }
 
 .gps-stat {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 6px;
 }
 
 .gps-stat-label {
@@ -1104,8 +1109,8 @@ details.acc-section > summary {
 }
 
 #gps-drift {
-  width: 220px;
-  height: 220px;
+  width: 300px;
+  height: 300px;
 }
 
 .gps-drift-stats {
@@ -1125,8 +1130,8 @@ details.acc-section > summary {
 }
 
 #gps-skyplot {
-  width: 220px;
-  height: 220px;
+  width: 300px;
+  height: 300px;
 }
 
 .gps-sky-label {
@@ -1144,19 +1149,11 @@ details.acc-section > summary {
   min-width: 240px;
 }
 
-.gps-snr-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
 .gps-snr-bars {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  height: 220px;
+  gap: 5px;
+  height: 274px; /* label(22) + 274 + legend row ≈ skyplot column height */
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1166,7 +1163,7 @@ details.acc-section > summary {
   justify-content: flex-end;
   align-items: center;
   flex: 1;
-  max-width: 26px;
+  max-width: 40px;
   height: 100%;
   position: relative;
 }
