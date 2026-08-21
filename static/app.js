@@ -978,6 +978,23 @@ function drawGpsTrends(hist) {
   }
   $('#gps-fix-strip').innerHTML = runs;
   $('#gps-trend-start').textContent = new Date(t0 * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  // fix uptime, losses, time-to-fix (duration of no-fix runs that ended in a fix)
+  let losses = 0, fixSamples = 0, outStart = null;
+  const reacq = [];
+  hist.forEach((h, i) => {
+    const fixed = h.mode >= 2;
+    if (fixed) fixSamples++;
+    if (!fixed && outStart === null) { outStart = h.t; if (i > 0) losses++; }
+    if (fixed && outStart !== null) { reacq.push(Math.max(h.t - outStart, 30)); outStart = null; }
+  });
+  const fmtDur = s => s < 90 ? `${s.toFixed(0)} s` : `${(s / 60).toFixed(1)} min`;
+  let fixInfo = `· ${(fixSamples / hist.length * 100).toFixed(1)}% fix, ${losses} ${losses === 1 ? 'loss' : 'losses'}`;
+  if (reacq.length) {
+    const avg = reacq.reduce((a, b) => a + b, 0) / reacq.length;
+    fixInfo += `, time to fix last ${fmtDur(reacq[reacq.length - 1])} / avg ${fmtDur(avg)}`;
+  }
+  $('#gps-trend-fix-info').textContent = fixInfo;
 }
 
 // ── Position drift plot ──────────────────────────────────────────
