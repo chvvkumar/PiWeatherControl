@@ -491,9 +491,12 @@ async def lifespan(app: FastAPI):
     gpio.init()
     _log_event("Enclosure controller started")
     task = asyncio.create_task(control_loop())
+    gps_task = asyncio.create_task(gps_sample_loop())
     yield
     # Shutdown
     task.cancel()
+    gps_task.cancel()
+    _save_gps_stats()
     gpio.cleanup()
     _log_event("Enclosure controller stopped")
 
@@ -627,6 +630,66 @@ async def set_heater_mode(body: ModeUpdate):
 
 _gps_peaks = {"sats_used": 0, "sats_visible": 0, "since": time.time()}
 
+# Long-term GPS stats: sampled by a background task so they accumulate
+# 24/7, independent of whether the web panel is open.
+GPS_SAMPLE_S = 30
+gps_history: collections.deque = collections.deque(maxlen=2880)  # 24 h at 30 s
+_gps_sky: dict = {}  # "azbin,elbin" (10 deg cells) -> [seen, used, snr_sum]
+_GPS_STATS_FILE = Path(__file__).parent / "gps_stats.json"
+
+
+def _load_gps_stats() -> None:
+    try:
+        d = json.loads(_GPS_STATS_FILE.read_text())
+        _gps_sky.update(d.get("sky", {}))
+        gps_history.extend(d.get("history", []))
+        _gps_peaks.update(d.get("peaks", {}))
+    except (OSError, ValueError):
+        pass
+
+
+def _save_gps_stats() -> None:
+    try:
+        _atomic_write_json(_GPS_STATS_FILE, {
+            "sky": _gps_sky, "history": list(gps_history), "peaks": _gps_peaks,
+        })
+    except OSError as e:
+        log.warning(f"Failed to persist GPS stats: {e}")
+
+
+def _record_gps_sample(g: dict) -> None:
+    _gps_peaks["sats_used"] = max(_gps_peaks["sats_used"], g["sats_used"])
+    _gps_peaks["sats_visible"] = max(_gps_peaks["sats_visible"], g["sats_visible"])
+    gps_history.append({
+        "t": round(time.time()), "mode": g["mode"],
+        "used": g["sats_used"], "vis": g["sats_visible"], "hdop": g["hdop"],
+    })
+    for s in g["satellites"]:
+        if s["az"] is None or s["el"] is None:
+            continue
+        key = f"{int(s['az'] // 10) % 36},{min(8, int(s['el'] // 10))}"
+        c = _gps_sky.setdefault(key, [0, 0, 0.0])
+        c[0] += 1
+        c[1] += 1 if s["used"] else 0
+        c[2] += s["snr"] or 0.0
+
+
+async def gps_sample_loop() -> None:
+    _load_gps_stats()
+    n = 0
+    while True:
+        try:
+            raw = await asyncio.to_thread(gps_reader.read_gpsd)
+            _record_gps_sample(gps_reader.summarize(raw))
+        except OSError:
+            gps_history.append({"t": round(time.time()), "mode": 0, "used": 0, "vis": 0, "hdop": None})
+        except Exception as e:
+            log.warning(f"GPS sample loop error: {e}")
+        n += 1
+        if n % 20 == 0:  # persist every 10 min
+            _save_gps_stats()
+        await asyncio.sleep(GPS_SAMPLE_S)
+
 
 @app.get("/api/gps")
 async def get_gps():
@@ -641,6 +704,12 @@ async def get_gps():
     data["max_sats_visible"] = _gps_peaks["sats_visible"]
     data["peaks_since"] = _gps_peaks["since"]
     return data
+
+
+@app.get("/api/gps/stats")
+async def get_gps_stats():
+    """24 h satellite/DOP history and sky-coverage bins from the sampler."""
+    return {"history": list(gps_history), "sky": _gps_sky, "sample_s": GPS_SAMPLE_S}
 
 
 @app.get("/api/history")

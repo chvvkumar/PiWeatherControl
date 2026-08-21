@@ -393,6 +393,26 @@
               </div>
             </div>
           </div>
+          <div class="gps-visuals">
+            <div class="gps-viz-col">
+              <span class="gps-stat-label" title="Where satellites were tracked, accumulated over time. Green = usually used in fix, orange = seen but rarely used, dark = no coverage (obstruction or no satellites pass there).">Sky coverage <span id="gps-skycov-info"></span></span>
+              <svg id="gps-skycov" viewBox="0 0 240 240" aria-label="Sky coverage heatmap"></svg>
+              <div class="gps-legend">
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>used in fix</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#d29922"></span>seen, rarely used</span>
+                <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#30363d"></span>no coverage</span>
+              </div>
+            </div>
+            <div class="gps-viz-col gps-trend-wrap">
+              <span class="gps-stat-label">Satellites (24 h) <span id="gps-trend-sats-info"></span></span>
+              <svg id="gps-sats-chart" class="gps-trend" viewBox="0 0 600 100" preserveAspectRatio="none" aria-label="Satellites used and visible over 24 hours"></svg>
+              <span class="gps-stat-label">HDOP (24 h) <span id="gps-trend-hdop-info"></span></span>
+              <svg id="gps-hdop-chart" class="gps-trend gps-trend-small" viewBox="0 0 600 60" preserveAspectRatio="none" aria-label="HDOP over 24 hours"></svg>
+              <span class="gps-stat-label" title="Green = 3D fix, orange = 2D, red = no fix / receiver offline">Fix quality (24 h)</span>
+              <svg id="gps-fix-strip" class="gps-strip" viewBox="0 0 600 12" preserveAspectRatio="none" aria-label="Fix quality over 24 hours"></svg>
+              <div class="gps-trend-times"><span id="gps-trend-start">--</span><span>now</span></div>
+            </div>
+          </div>
         </div>
       </details>
     </section>

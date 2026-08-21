@@ -58,6 +58,28 @@ def _raw_with_sats(n_used, n_visible):
     return {"tpv": {"mode": 3}, "sky": {"satellites": sats}}
 
 
+def test_record_gps_sample_bins_and_history(client):
+    import app as app_module
+
+    app_module.gps_history.clear()
+    app_module._gps_sky.clear()
+    g = gps_reader.summarize(_raw_with_sats(3, 5))
+    app_module._record_gps_sample(g)
+
+    assert len(app_module.gps_history) == 1
+    row = app_module.gps_history[0]
+    assert row["used"] == 3 and row["vis"] == 5 and row["mode"] == 3
+    # all test sats share az=100 el=45 -> single bin "10,4"
+    assert list(app_module._gps_sky.keys()) == ["10,4"]
+    seen, used, snr_sum = app_module._gps_sky["10,4"]
+    assert (seen, used) == (5, 3)
+    assert snr_sum == 5 * 25.0
+
+    resp = client.get("/api/gps/stats").json()
+    assert resp["history"][0]["used"] == 3
+    assert resp["sky"]["10,4"][0] == 5
+
+
 def test_gps_peaks_accumulate(client, monkeypatch):
     import app as app_module
 

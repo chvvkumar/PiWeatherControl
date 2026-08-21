@@ -23,3 +23,6 @@ docs/superpowers/
 Thumbs.db
 .vscode/
 .idea/
+
+# Runtime GPS stats persistence
+gps_stats.json

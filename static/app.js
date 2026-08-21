@@ -889,6 +889,95 @@ function renderGps(g) {
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);
   recordDrift(g);
+  fetchGpsStats();
+}
+
+// ── Long-term GPS stats: sky coverage + 24h trends ───────────────
+let _gpsStatsLast = 0;
+
+async function fetchGpsStats() {
+  const now = Date.now();
+  if (now - _gpsStatsLast < 60000) return; // server samples every 30s; no point polling faster
+  const s = await api('/api/gps/stats');
+  if (!s || s.error) return;
+  _gpsStatsLast = now;
+  drawSkyCoverage(s.sky, s.history);
+  drawGpsTrends(s.history);
+}
+
+function drawSkyCoverage(sky, hist) {
+  const svg = $('#gps-skycov');
+  const C = 120, R = 105;
+  const pt = (r, deg) => { const a = deg * Math.PI / 180; return [C + r * Math.sin(a), C - r * Math.cos(a)]; };
+  let maxSeen = 0;
+  for (const c of Object.values(sky)) maxSeen = Math.max(maxSeen, c[0]);
+  let out = '';
+  for (const [key, [seen, used, snrSum]] of Object.entries(sky)) {
+    const [ab, eb] = key.split(',').map(Number);
+    const r2 = R * (90 - eb * 10) / 90, r1 = R * (90 - (eb + 1) * 10) / 90;
+    const a0 = ab * 10, a1 = a0 + 10;
+    const [x0, y0] = pt(r2, a0), [x1, y1] = pt(r2, a1), [x2, y2] = pt(r1, a1), [x3, y3] = pt(r1, a0);
+    const inner = r1 < 0.5
+      ? `L${C},${C}`
+      : `L${x2.toFixed(1)},${y2.toFixed(1)} A${r1.toFixed(1)},${r1.toFixed(1)} 0 0 0 ${x3.toFixed(1)},${y3.toFixed(1)}`;
+    const ratio = used / seen;
+    const alpha = 0.15 + 0.85 * Math.min(1, seen / (maxSeen * 0.5 || 1));
+    const hue = 30 + 90 * ratio; // orange (rarely used) -> green (used)
+    out += `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r2.toFixed(1)},${r2.toFixed(1)} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)} ${inner} Z" fill="hsl(${hue.toFixed(0)},60%,42%)" fill-opacity="${alpha.toFixed(2)}"><title>az ${a0}–${a1}° el ${eb * 10}–${eb * 10 + 10}°: seen ${seen}×, used ${(ratio * 100).toFixed(0)}%, avg SNR ${(snrSum / seen).toFixed(0)}</title></path>`;
+  }
+  for (const el of [0, 30, 60]) out += `<circle cx="${C}" cy="${C}" r="${R * (90 - el) / 90}" fill="none" stroke="rgba(255,255,255,0.15)"/>`;
+  out += `<line x1="${C}" y1="${C - R}" x2="${C}" y2="${C + R}" stroke="rgba(255,255,255,0.10)"/>`;
+  out += `<line x1="${C - R}" y1="${C}" x2="${C + R}" y2="${C}" stroke="rgba(255,255,255,0.10)"/>`;
+  out += `<text x="${C}" y="${C - R - 4}" class="gps-sky-label" text-anchor="middle">N</text>`;
+  out += `<text x="${C + R + 8}" y="${C + 4}" class="gps-sky-label" text-anchor="middle">E</text>`;
+  svg.innerHTML = out;
+  if (hist.length > 1) {
+    const hrs = (hist[hist.length - 1].t - hist[0].t) / 3600;
+    $('#gps-skycov-info').textContent = `· ${hrs < 1 ? (hrs * 60).toFixed(0) + ' min' : hrs.toFixed(1) + ' h'} of data`;
+  }
+}
+
+function drawGpsTrends(hist) {
+  if (hist.length < 2) return;
+  const W = 600;
+  const t0 = hist[0].t, span = Math.max(1, hist[hist.length - 1].t - t0);
+  const X = t => (t - t0) / span * W;
+
+  // satellites: used area + visible line
+  const H1 = 100;
+  const maxSats = Math.max(4, ...hist.map(h => h.vis));
+  const y1 = v => H1 - v / maxSats * (H1 - 8);
+  const ptsUsed = hist.map(h => `${X(h.t).toFixed(1)},${y1(h.used).toFixed(1)}`).join(' ');
+  const ptsVis = hist.map(h => `${X(h.t).toFixed(1)},${y1(h.vis).toFixed(1)}`).join(' ');
+  $('#gps-sats-chart').innerHTML =
+    `<polygon points="0,${H1} ${ptsUsed} ${W},${H1}" fill="rgba(88,166,255,0.18)"/>` +
+    `<polyline points="${ptsVis}" fill="none" stroke="rgba(139,148,158,0.8)" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
+    `<polyline points="${ptsUsed}" fill="none" stroke="#58a6ff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+  const last = hist[hist.length - 1];
+  $('#gps-trend-sats-info').textContent = `· blue used (${last.used}), grey visible (${last.vis}), peak ${maxSats}`;
+
+  // hdop line
+  const H2 = 60, hd = hist.filter(h => h.hdop != null);
+  if (hd.length > 1) {
+    const maxH = Math.max(2, ...hd.map(h => Math.min(h.hdop, 10)));
+    const y2 = v => H2 - Math.min(v, maxH) / maxH * (H2 - 6);
+    $('#gps-hdop-chart').innerHTML =
+      `<polyline points="${hd.map(h => `${X(h.t).toFixed(1)},${y2(h.hdop).toFixed(1)}`).join(' ')}" fill="none" stroke="#d29922" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+    $('#gps-trend-hdop-info').textContent = `· now ${hd[hd.length - 1].hdop.toFixed(2)}, range ${Math.min(...hd.map(h => h.hdop)).toFixed(2)}–${Math.max(...hd.map(h => h.hdop)).toFixed(2)}`;
+  }
+
+  // fix quality strip: merged same-mode runs
+  const colorFor = m => m === 3 ? '#3fb950' : m === 2 ? '#d29922' : '#f85149';
+  let runs = '', runStart = 0;
+  for (let i = 1; i <= hist.length; i++) {
+    if (i === hist.length || hist[i].mode !== hist[runStart].mode) {
+      const xa = X(hist[runStart].t), xb = i === hist.length ? W : X(hist[i].t);
+      runs += `<rect x="${xa.toFixed(1)}" y="0" width="${Math.max(0.5, xb - xa).toFixed(1)}" height="12" fill="${colorFor(hist[runStart].mode)}"/>`;
+      runStart = i;
+    }
+  }
+  $('#gps-fix-strip').innerHTML = runs;
+  $('#gps-trend-start').textContent = new Date(t0 * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // ── Position drift plot ──────────────────────────────────────────
