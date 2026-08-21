@@ -82,6 +82,15 @@ def test_record_gps_sample_bins_and_history(client):
     assert resp["sky"]["10,4"][0] == 5
 
 
+def test_parse_ttff(client):
+    import app as app_module
+
+    out = "UBX-NAV-STATUS:\n  iTOW 495101000 gpsFix 3 flags 0xdd fixStat 0x0 flags2 0x8\n  ttff 692457, msss 68425473\n"
+    parsed = app_module._parse_ttff(out)
+    assert parsed == {"ttff_s": 692.457, "uptime_s": 68425.473}
+    assert app_module._parse_ttff("no ubx data") is None
+
+
 def test_gps_peaks_accumulate(client, monkeypatch):
     import app as app_module
 

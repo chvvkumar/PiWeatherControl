@@ -885,6 +885,13 @@ function renderGps(g) {
   setTxt('#gps-err', g.eph != null ? `±${g.eph.toFixed(1)} / ±${g.epv?.toFixed(1) ?? '--'} m` : '--');
   setTxt('#gps-speed', fmt(g.speed, 2, ' m/s'));
   setTxt('#gps-time', g.time ? g.time.slice(11, 19) : '--');
+  if (g.ttff && g.ttff.ttff_s != null) {
+    const t = g.ttff.ttff_s;
+    setTxt('#gps-ttff', t < 90 ? `${t.toFixed(0)} s` : `${(t / 60).toFixed(1)} min`);
+    $('#gps-ttff-label').title = `Receiver-reported time from power-up to first fix (UBX-NAV-STATUS). Static until the receiver resets. Receiver up ${(g.ttff.uptime_s / 3600).toFixed(1)} h.`;
+  } else {
+    setTxt('#gps-ttff', '--');
+  }
 
   drawSkyplot(g.satellites);
   drawSnrBars(g.satellites);

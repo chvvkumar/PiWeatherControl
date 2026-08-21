@@ -5,6 +5,7 @@ import collections
 import json
 import logging
 import math
+import re
 import shutil
 import subprocess
 import time
@@ -676,7 +677,31 @@ def _record_gps_sample(g: dict) -> None:
         c[2] += s["snr"] or 0.0
 
 
+_gps_ttff: dict | None = None
+
+
+def _parse_ttff(out: str) -> dict | None:
+    """Extract ttff/msss (ms) from ubxtool UBX-NAV-STATUS output."""
+    m = re.search(r"ttff (\d+), msss (\d+)", out)
+    if m:
+        return {"ttff_s": int(m.group(1)) / 1000, "uptime_s": int(m.group(2)) / 1000}
+    return None
+
+
+def _read_receiver_ttff() -> dict | None:
+    """Receiver-reported time to first fix. Static until the receiver resets."""
+    try:
+        out = subprocess.run(
+            ["ubxtool", "-w", "3", "-p", "NAV-STATUS"],
+            capture_output=True, text=True, timeout=15,
+        ).stdout
+        return _parse_ttff(out)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+
+
 async def gps_sample_loop() -> None:
+    global _gps_ttff
     _load_gps_stats()
     n = 0
     while True:
@@ -687,6 +712,8 @@ async def gps_sample_loop() -> None:
             gps_history.append({"t": round(time.time()), "mode": 0, "used": 0, "vis": 0, "hdop": None})
         except Exception as e:
             log.warning(f"GPS sample loop error: {e}")
+        if n % 120 == 0:  # at start, then hourly — it only changes on receiver reset
+            _gps_ttff = await asyncio.to_thread(_read_receiver_ttff) or _gps_ttff
         n += 1
         if n % 20 == 0:  # persist every 10 min
             _save_gps_stats()
@@ -705,6 +732,7 @@ async def get_gps():
     data["max_sats_used"] = _gps_peaks["sats_used"]
     data["max_sats_visible"] = _gps_peaks["sats_visible"]
     data["peaks_since"] = _gps_peaks["since"]
+    data["ttff"] = _gps_ttff
     return data
 
 
