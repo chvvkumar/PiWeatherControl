@@ -1101,7 +1101,6 @@ details.acc-section > summary {
 .gps-copy.copied { border-color: var(--green); color: var(--green); }
 
 .gps-reset { margin-left: 6px; }
-.gps-copy.copied { opacity: 1; color: var(--green); }
 
 .gps-visuals {
   display: flex;
