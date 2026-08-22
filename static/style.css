@@ -1074,33 +1074,33 @@ details.acc-section > summary {
   gap: 6px;
 }
 
-.gps-copy {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px;
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  opacity: 0.6;
-}
-
-.gps-copy:hover { opacity: 1; color: var(--accent); }
-
+.gps-copy,
 .gps-reset {
   display: inline-flex;
   align-items: center;
-  padding: 1px;
-  margin-left: 4px;
-  background: none;
-  border: none;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
   color: var(--text-dim);
   cursor: pointer;
-  opacity: 0.5;
   vertical-align: middle;
+  transition: all 0.15s;
 }
 
-.gps-reset:hover { opacity: 1; color: var(--red); }
+.gps-copy:hover,
+.gps-reset:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.gps-copy.copied { border-color: var(--green); color: var(--green); }
+
+.gps-reset { margin-left: 6px; }
 .gps-copy.copied { opacity: 1; color: var(--green); }
 
 .gps-visuals {
