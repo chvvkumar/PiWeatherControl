@@ -912,10 +912,15 @@ async function fetchGpsStats() {
   drawDrift(s.history.filter(r => r.mode >= 2 && r.lat != null && r.lon != null));
 }
 
+// Allsky camera frame orientation: looking up (mirrored vs a map) and
+// rotated so S sits upper-left, E upper-right, N lower-right, W bottom.
+// Image angle (clockwise from top) = SKYCOV_ROT - azimuth.
+const SKYCOV_ROT = 120;
+
 function drawSkyCoverage(sky, hist) {
   const svg = $('#gps-skycov');
   const C = 120, R = 105;
-  const pt = (r, deg) => { const a = deg * Math.PI / 180; return [C + r * Math.sin(a), C - r * Math.cos(a)]; };
+  const pt = (r, az) => { const a = (SKYCOV_ROT - az) * Math.PI / 180; return [C + r * Math.sin(a), C - r * Math.cos(a)]; };
   let maxSeen = 0;
   for (const c of Object.values(sky)) maxSeen = Math.max(maxSeen, c[0]);
   let out = '';
@@ -926,17 +931,18 @@ function drawSkyCoverage(sky, hist) {
     const [x0, y0] = pt(r2, a0), [x1, y1] = pt(r2, a1), [x2, y2] = pt(r1, a1), [x3, y3] = pt(r1, a0);
     const inner = r1 < 0.5
       ? `L${C},${C}`
-      : `L${x2.toFixed(1)},${y2.toFixed(1)} A${r1.toFixed(1)},${r1.toFixed(1)} 0 0 0 ${x3.toFixed(1)},${y3.toFixed(1)}`;
+      : `L${x2.toFixed(1)},${y2.toFixed(1)} A${r1.toFixed(1)},${r1.toFixed(1)} 0 0 1 ${x3.toFixed(1)},${y3.toFixed(1)}`;
     const ratio = used / seen;
     const alpha = 0.15 + 0.85 * Math.min(1, seen / (maxSeen * 0.5 || 1));
     const hue = 30 + 90 * ratio; // orange (rarely used) -> green (used)
-    out += `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r2.toFixed(1)},${r2.toFixed(1)} 0 0 1 ${x1.toFixed(1)},${y1.toFixed(1)} ${inner} Z" fill="hsl(${hue.toFixed(0)},60%,42%)" fill-opacity="${alpha.toFixed(2)}"><title>az ${a0}–${a1}° el ${eb * 10}–${eb * 10 + 10}°: seen ${seen}×, used ${(ratio * 100).toFixed(0)}%, avg SNR ${(snrSum / seen).toFixed(0)}</title></path>`;
+    out += `<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${r2.toFixed(1)},${r2.toFixed(1)} 0 0 0 ${x1.toFixed(1)},${y1.toFixed(1)} ${inner} Z" fill="hsl(${hue.toFixed(0)},60%,42%)" fill-opacity="${alpha.toFixed(2)}"><title>az ${a0}–${a1}° el ${eb * 10}–${eb * 10 + 10}°: seen ${seen}×, used ${(ratio * 100).toFixed(0)}%, avg SNR ${(snrSum / seen).toFixed(0)}</title></path>`;
   }
   for (const el of [0, 30, 60]) out += `<circle cx="${C}" cy="${C}" r="${R * (90 - el) / 90}" fill="none" stroke="rgba(255,255,255,0.15)"/>`;
-  out += `<line x1="${C}" y1="${C - R}" x2="${C}" y2="${C + R}" stroke="rgba(255,255,255,0.10)"/>`;
-  out += `<line x1="${C - R}" y1="${C}" x2="${C + R}" y2="${C}" stroke="rgba(255,255,255,0.10)"/>`;
-  out += `<text x="${C}" y="${C - R - 4}" class="gps-sky-label" text-anchor="middle">N</text>`;
-  out += `<text x="${C + R + 8}" y="${C + 4}" class="gps-sky-label" text-anchor="middle">E</text>`;
+  for (const [az, name] of [[0, 'N'], [90, 'E'], [180, 'S'], [270, 'W']]) {
+    const [xa, ya] = pt(R, az), [xb, yb] = pt(R, az + 180), [xl, yl] = pt(R + 9, az);
+    if (az < 180) out += `<line x1="${xa.toFixed(1)}" y1="${ya.toFixed(1)}" x2="${xb.toFixed(1)}" y2="${yb.toFixed(1)}" stroke="rgba(255,255,255,0.10)"/>`;
+    out += `<text x="${xl.toFixed(1)}" y="${(yl + 3.5).toFixed(1)}" class="gps-sky-label" text-anchor="middle">${name}</text>`;
+  }
   svg.innerHTML = out;
   if (hist.length > 1) {
     const hrs = (hist[hist.length - 1].t - hist[0].t) / 3600;
