@@ -355,7 +355,7 @@
           <div class="gps-visuals">
           <div class="gps-stats">
             <div class="gps-stat"><span class="gps-stat-label">Satellites</span><span class="gps-stat-val" id="gps-sats">--</span></div>
-            <div class="gps-stat"><span class="gps-stat-label" id="gps-sats-max-label" title="Peak used / visible since service start">Peak used / seen</span><span class="gps-stat-val" id="gps-sats-max">--</span></div>
+            <div class="gps-stat"><span class="gps-stat-label" id="gps-sats-max-label" title="Peak used / visible since service start">Peak used / seen</span><button class="gps-reset" data-reset="peaks" title="Reset peak counters" aria-label="Reset peak counters"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button><span class="gps-stat-val" id="gps-sats-max">--</span></div>
             <div class="gps-stat"><span class="gps-stat-label">Latitude</span><span class="gps-stat-row"><span class="gps-stat-val" id="gps-lat">--</span><button class="gps-copy" data-copy="gps-lat" title="Copy latitude" aria-label="Copy latitude"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></span></div>
             <div class="gps-stat"><span class="gps-stat-label">Longitude</span><span class="gps-stat-row"><span class="gps-stat-val" id="gps-lon">--</span><button class="gps-copy" data-copy="gps-lon" title="Copy longitude" aria-label="Copy longitude"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></span></div>
             <div class="gps-stat"><span class="gps-stat-label">Altitude MSL</span><span class="gps-stat-row"><span class="gps-stat-val" id="gps-alt">--</span><button class="gps-copy" data-copy="gps-alt" title="Copy altitude" aria-label="Copy altitude"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></span></div>
@@ -381,7 +381,7 @@
               </div>
             </div>
             <div class="gps-viz-col gps-drift-wrap">
-              <span class="gps-stat-label" title="Each fix plotted as meters east/north of the session mean position. Dashed ring is CEP50: half of fixes fall inside.">Position drift</span>
+              <span class="gps-stat-label" title="Each fix plotted as meters east/north of the session mean position. Dashed ring is CEP50: half of fixes fall inside.">Position drift <button class="gps-reset" data-reset="drift" title="Reset drift history" aria-label="Reset drift history"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></span>
               <div class="gps-drift-row">
                 <svg id="gps-drift" viewBox="0 0 240 240" aria-label="Position drift plot"></svg>
                 <div class="gps-drift-stats">
@@ -396,7 +396,7 @@
           </div>
           <div class="gps-visuals">
             <div class="gps-viz-col">
-              <span class="gps-stat-label" title="Where satellites were tracked, accumulated over time. Green = usually used in fix, orange = seen but rarely used, dark = no coverage (obstruction or no satellites pass there). Oriented like the allsky camera frame: S upper-left, E upper-right, N lower-right, W bottom.">Sky coverage <span id="gps-skycov-info"></span></span>
+              <span class="gps-stat-label" title="Where satellites were tracked, accumulated over time. Green = usually used in fix, orange = seen but rarely used, dark = no coverage (obstruction or no satellites pass there). Oriented like the allsky camera frame: S upper-left, E upper-right, N lower-right, W bottom.">Sky coverage <span id="gps-skycov-info"></span> <button class="gps-reset" data-reset="sky" title="Reset sky coverage" aria-label="Reset sky coverage"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></span>
               <svg id="gps-skycov" viewBox="0 0 240 240" aria-label="Sky coverage heatmap"></svg>
               <div class="gps-legend">
                 <span class="gps-legend-item"><span class="gps-legend-dot" style="background:#3fb950"></span>used in fix</span>
@@ -405,11 +405,11 @@
               </div>
             </div>
             <div class="gps-viz-col gps-trend-wrap">
-              <span class="gps-stat-label">Satellites (24 h) <span id="gps-trend-sats-info"></span></span>
+              <span class="gps-stat-label">Satellites (24 h) <span id="gps-trend-sats-info"></span> <button class="gps-reset" data-reset="sats" title="Reset satellite trend" aria-label="Reset satellite trend"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></span>
               <svg id="gps-sats-chart" class="gps-trend" viewBox="0 0 600 100" preserveAspectRatio="none" aria-label="Satellites used and visible over 24 hours"></svg>
-              <span class="gps-stat-label">HDOP (24 h) <span id="gps-trend-hdop-info"></span></span>
+              <span class="gps-stat-label">HDOP (24 h) <span id="gps-trend-hdop-info"></span> <button class="gps-reset" data-reset="hdop" title="Reset HDOP trend" aria-label="Reset HDOP trend"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></span>
               <svg id="gps-hdop-chart" class="gps-trend gps-trend-small" viewBox="0 0 600 60" preserveAspectRatio="none" aria-label="HDOP over 24 hours"></svg>
-              <span class="gps-stat-label" title="Green = 3D fix, orange = 2D, red = no fix / receiver offline. Time to fix derived from 30 s samples, so it reads high by up to 30 s.">Fix quality (24 h) <span id="gps-trend-fix-info"></span></span>
+              <span class="gps-stat-label" title="Green = 3D fix, orange = 2D, red = no fix / receiver offline. Time to fix derived from 30 s samples, so it reads high by up to 30 s.">Fix quality (24 h) <span id="gps-trend-fix-info"></span> <button class="gps-reset" data-reset="fix" title="Reset fix quality history" aria-label="Reset fix quality history"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></span>
               <svg id="gps-fix-strip" class="gps-strip" viewBox="0 0 600 12" preserveAspectRatio="none" aria-label="Fix quality over 24 hours"></svg>
               <div class="gps-trend-times"><span id="gps-trend-start">--</span><span>now</span></div>
             </div>

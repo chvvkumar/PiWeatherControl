@@ -1086,6 +1086,21 @@ details.acc-section > summary {
 }
 
 .gps-copy:hover { opacity: 1; color: var(--accent); }
+
+.gps-reset {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px;
+  margin-left: 4px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0.5;
+  vertical-align: middle;
+}
+
+.gps-reset:hover { opacity: 1; color: var(--red); }
 .gps-copy.copied { opacity: 1; color: var(--green); }
 
 .gps-visuals {

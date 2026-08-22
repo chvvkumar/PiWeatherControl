@@ -907,9 +907,23 @@ async function fetchGpsStats() {
   const s = await api('/api/gps/stats');
   if (!s || s.error) return;
   _gpsStatsLast = now;
-  drawSkyCoverage(s.sky, s.history);
-  drawGpsTrends(s.history);
-  drawDrift(s.history.filter(r => r.mode >= 2 && r.lat != null && r.lon != null));
+  const since = m => s.resets?.[m] ?? 0;
+  drawSkyCoverage(s.sky, s.history.filter(r => r.t >= since('sky')));
+  drawGpsTrends(s.history, since);
+  drawDrift(s.history.filter(r => r.t >= since('drift') && r.mode >= 2 && r.lat != null && r.lon != null));
+}
+
+function initGpsResetButtons() {
+  document.querySelectorAll('.gps-reset').forEach(btn => btn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const m = btn.dataset.reset;
+    if (!confirm(`Reset "${btn.title.replace(/^Reset /, '')}"? This cannot be undone.`)) return;
+    const r = await api(`/api/gps/reset/${m}`, { method: 'POST' });
+    if (!r || r.error) return;
+    _gpsStatsLast = 0;
+    fetchGpsStats();
+    if (m === 'peaks') fetchGps();
+  }));
 }
 
 // Allsky camera frame orientation: looking up (mirrored vs a map) and
@@ -950,27 +964,34 @@ function drawSkyCoverage(sky, hist) {
   }
 }
 
-function drawGpsTrends(hist) {
-  if (hist.length < 2) return;
+function drawGpsTrends(all, since = () => 0) {
+  if (all.length < 2) return;
   const W = 600;
-  const t0 = hist[0].t, span = Math.max(1, hist[hist.length - 1].t - t0);
+  const t0 = all[0].t, span = Math.max(1, all[all.length - 1].t - t0);
   const X = t => (t - t0) / span * W;
+  const empty = (id, info) => { $(id).innerHTML = ''; if (info) $(info).textContent = '· reset, collecting…'; };
 
   // satellites: used area + visible line
   const H1 = 100;
+  let hist = all.filter(h => h.t >= since('sats'));
+  if (hist.length < 2) { empty('#gps-sats-chart', '#gps-trend-sats-info'); hist = []; }
   const maxSats = Math.max(4, ...hist.map(h => h.vis));
   const y1 = v => H1 - v / maxSats * (H1 - 8);
   const ptsUsed = hist.map(h => `${X(h.t).toFixed(1)},${y1(h.used).toFixed(1)}`).join(' ');
   const ptsVis = hist.map(h => `${X(h.t).toFixed(1)},${y1(h.vis).toFixed(1)}`).join(' ');
-  $('#gps-sats-chart').innerHTML =
-    `<polygon points="0,${H1} ${ptsUsed} ${W},${H1}" fill="rgba(88,166,255,0.18)"/>` +
-    `<polyline points="${ptsVis}" fill="none" stroke="rgba(139,148,158,0.8)" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
-    `<polyline points="${ptsUsed}" fill="none" stroke="#58a6ff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
-  const last = hist[hist.length - 1];
-  $('#gps-trend-sats-info').textContent = `· blue used (${last.used}), grey visible (${last.vis}), peak ${maxSats}`;
+  if (hist.length) {
+    const x0 = X(hist[0].t).toFixed(1);
+    $('#gps-sats-chart').innerHTML =
+      `<polygon points="${x0},${H1} ${ptsUsed} ${W},${H1}" fill="rgba(88,166,255,0.18)"/>` +
+      `<polyline points="${ptsVis}" fill="none" stroke="rgba(139,148,158,0.8)" stroke-width="1" vector-effect="non-scaling-stroke"/>` +
+      `<polyline points="${ptsUsed}" fill="none" stroke="#58a6ff" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+    const last = hist[hist.length - 1];
+    $('#gps-trend-sats-info').textContent = `· blue used (${last.used}), grey visible (${last.vis}), peak ${maxSats}`;
+  }
 
   // hdop line
-  const H2 = 60, hd = hist.filter(h => h.hdop != null);
+  const H2 = 60, hd = all.filter(h => h.t >= since('hdop') && h.hdop != null);
+  if (hd.length < 2) empty('#gps-hdop-chart', '#gps-trend-hdop-info');
   if (hd.length > 1) {
     const maxH = Math.max(2, ...hd.map(h => Math.min(h.hdop, 10)));
     const y2 = v => H2 - Math.min(v, maxH) / maxH * (H2 - 6);
@@ -980,6 +1001,9 @@ function drawGpsTrends(hist) {
   }
 
   // fix quality strip: merged same-mode runs
+  hist = all.filter(h => h.t >= since('fix'));
+  $('#gps-trend-start').textContent = new Date(t0 * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (hist.length < 2) { empty('#gps-fix-strip', '#gps-trend-fix-info'); return; }
   const colorFor = m => m === 3 ? '#3fb950' : m === 2 ? '#d29922' : '#f85149';
   let runs = '', runStart = 0;
   for (let i = 1; i <= hist.length; i++) {
@@ -990,7 +1014,6 @@ function drawGpsTrends(hist) {
     }
   }
   $('#gps-fix-strip').innerHTML = runs;
-  $('#gps-trend-start').textContent = new Date(t0 * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   // fix uptime, losses, time-to-fix (duration of no-fix runs that ended in a fix)
   let losses = 0, fixSamples = 0, outStart = null;
@@ -1188,6 +1211,7 @@ async function init() {
   $('details[data-acc="gps"]')?.addEventListener('toggle', e => { if (e.target.open) fetchGps(); });
   fetchGps();
   initGpsCopyButtons();
+  initGpsResetButtons();
   initDirtyHints();
 
   // Redraw sparklines on resize (gauges handled by animation loop)

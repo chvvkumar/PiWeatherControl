@@ -109,3 +109,25 @@ def test_gps_peaks_accumulate(client, monkeypatch):
     assert body["max_sats_used"] == 8
     assert body["max_sats_visible"] == 14
     assert body["peaks_since"] > 0
+
+
+def test_reset_gps_metrics(client, monkeypatch):
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "_save_gps_stats", lambda: None)
+    app_module._gps_peaks.update({"sats_used": 9, "sats_visible": 20})
+    app_module._gps_sky.clear()
+    app_module._gps_sky["10,4"] = [5, 3, 100.0]
+    app_module._gps_resets.clear()
+
+    assert client.post("/api/gps/reset/peaks").status_code == 200
+    assert app_module._gps_peaks["sats_used"] == 0 and app_module._gps_peaks["sats_visible"] == 0
+
+    assert client.post("/api/gps/reset/sky").status_code == 200
+    assert app_module._gps_sky == {}
+
+    assert client.post("/api/gps/reset/drift").status_code == 200
+    assert app_module._gps_resets["drift"] > 0
+    assert client.get("/api/gps/stats").json()["resets"]["drift"] == app_module._gps_resets["drift"]
+
+    assert client.post("/api/gps/reset/bogus").status_code == 400

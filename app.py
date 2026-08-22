@@ -636,6 +636,8 @@ _gps_peaks = {"sats_used": 0, "sats_visible": 0, "since": time.time()}
 GPS_SAMPLE_S = 30
 gps_history: collections.deque = collections.deque(maxlen=2880)  # 24 h at 30 s
 _gps_sky: dict = {}  # "azbin,elbin" (10 deg cells) -> [seen, used, snr_sum]
+_gps_resets: dict = {}  # metric -> unix time of last manual reset (history-derived metrics ignore older rows)
+GPS_RESETTABLE = {"peaks", "drift", "sky", "sats", "hdop", "fix"}
 _GPS_STATS_FILE = Path(__file__).parent / "gps_stats.json"
 
 
@@ -645,6 +647,7 @@ def _load_gps_stats() -> None:
         _gps_sky.update(d.get("sky", {}))
         gps_history.extend(d.get("history", []))
         _gps_peaks.update(d.get("peaks", {}))
+        _gps_resets.update(d.get("resets", {}))
     except (OSError, ValueError):
         pass
 
@@ -653,6 +656,7 @@ def _save_gps_stats() -> None:
     try:
         _atomic_write_json(_GPS_STATS_FILE, {
             "sky": _gps_sky, "history": list(gps_history), "peaks": _gps_peaks,
+            "resets": _gps_resets,
         })
     except OSError as e:
         log.warning(f"Failed to persist GPS stats: {e}")
@@ -741,7 +745,22 @@ async def get_gps():
 @app.get("/api/gps/stats")
 async def get_gps_stats():
     """24 h satellite/DOP history and sky-coverage bins from the sampler."""
-    return {"history": list(gps_history), "sky": _gps_sky, "sample_s": GPS_SAMPLE_S}
+    return {"history": list(gps_history), "sky": _gps_sky, "sample_s": GPS_SAMPLE_S, "resets": _gps_resets}
+
+
+@app.post("/api/gps/reset/{metric}")
+async def reset_gps_metric(metric: str):
+    if metric not in GPS_RESETTABLE:
+        return JSONResponse({"error": f"unknown metric; one of {sorted(GPS_RESETTABLE)}"}, 400)
+    now = time.time()
+    if metric == "peaks":
+        _gps_peaks.update({"sats_used": 0, "sats_visible": 0, "since": now})
+    elif metric == "sky":
+        _gps_sky.clear()
+    _gps_resets[metric] = now
+    _save_gps_stats()
+    _log_event(f"GPS metric reset: {metric}")
+    return {"reset": metric, "at": now}
 
 
 @app.get("/api/history")
