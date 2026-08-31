@@ -940,6 +940,7 @@ function drawSkyCoverage(sky, hist) {
   let out = '';
   for (const [key, [seen, used, snrSum]] of Object.entries(sky)) {
     const [ab, eb] = key.split(',').map(Number);
+    if (eb < 0 || eb > 8) continue; // below-horizon bins from older data
     const r2 = R * (90 - eb * 10) / 90, r1 = R * (90 - (eb + 1) * 10) / 90;
     const a0 = ab * 10, a1 = a0 + 10;
     const [x0, y0] = pt(r2, a0), [x1, y1] = pt(r2, a1), [x2, y2] = pt(r1, a1), [x3, y3] = pt(r1, a0);

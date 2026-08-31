@@ -674,8 +674,8 @@ def _record_gps_sample(g: dict) -> None:
     for s in g["satellites"]:
         # SBAS birds are geostationary: same cell every sample, never used in
         # the fix, so they would swamp the coverage map with a fake dead spot.
-        if s["az"] is None or s["el"] is None or s["gnss"] == "SBAS":
-            continue
+        if s["az"] is None or s["el"] is None or s["el"] < 0 or s["gnss"] == "SBAS":
+            continue  # below-horizon entries would land in a negative elevation bin
         key = f"{int(s['az'] // 10) % 36},{min(8, int(s['el'] // 10))}"
         c = _gps_sky.setdefault(key, [0, 0, 0.0])
         c[0] += 1
