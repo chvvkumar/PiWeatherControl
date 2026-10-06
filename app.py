@@ -353,8 +353,58 @@ def _throttle_summary(bits: int) -> str:
 # ---------------------------------------------------------------------------
 # Allsky overlay JSON writer
 # ---------------------------------------------------------------------------
+# Allsky reads flat {"KEY": value} entries as strings. A {"value": v, "type": t,
+# "format": f} dict per key tells the overlay editor and database the real type.
+# Keys not listed here stay flat (string).
+_ALLSKY_META = {
+    "AS_DEWCONTROLAMBIENT": ("temperature", "{:.1f}", "Enclosure ambient temperature"),
+    "AS_DEWCONTROLDEW": ("temperature", "{:.1f}", "Enclosure dew point"),
+    "AS_DEWCONTROLHUMIDITY": ("number", "{:.0f}", "Enclosure relative humidity %"),
+    "AS_DEWCONTROLPRESSURE": ("number", "{:.1f}", "Enclosure pressure hPa"),
+    "AS_DEWCONTROLRELHUMIDITY": ("number", "{:.0f}", "Enclosure relative humidity %"),
+    "AS_DEWCONTROLALTITUDE": ("number", "{:.0f}", "Pressure altitude m"),
+    "OTH_FANT": ("number", "{:.0f}", "Fan threshold temperature"),
+    "OTH_PWM_DUTY_CYCLE": ("number", "{:.0f}", "Fan PWM duty cycle %"),
+    "OTH_TEMPERATURE": ("temperature", "{:.1f}", "Fan control temperature"),
+    "AS_TEMPAMBIENT1": ("temperature", "{:.1f}", "BME280 ambient temperature"),
+    "AS_TEMPDEW1": ("temperature", "{:.1f}", "BME280 dew point"),
+    "AS_TEMPHUMIDITY1": ("number", "{:.0f}", "BME280 relative humidity %"),
+    "AS_TEMPPRESSURE1": ("number", "{:.1f}", "BME280 pressure hPa"),
+    "AS_TEMPRELHUMIDITY1": ("number", "{:.0f}", "BME280 relative humidity %"),
+    "AS_TEMPALTITUDE1": ("number", "{:.0f}", "Pressure altitude m"),
+    "AS_CPUTEMP": ("temperature", "{:.1f}", "Pi CPU temperature"),
+    **{f"AS_CLOCK{n}": ("number", "{:.3f}", f"Pi {n.lower()} clock GHz")
+       for n in ("ARM", "CORE", "ISP", "V3D", "UART", "PWM", "EMMC", "PIXEL", "VEC", "HDMI", "DPI")},
+    **{f"AS_VOLTAGE{n}": ("number", "{:.3f}", f"Pi {n.lower()} voltage V")
+       for n in ("CORE", "SDRAM_C", "SDRAM_I", "SDRAM_P")},
+}
+
+
+def _typed_allsky(data: dict) -> dict:
+    """Wrap keys present in _ALLSKY_META as typed Allsky extra-data entries."""
+    out = {}
+    for key, value in data.items():
+        meta = _ALLSKY_META.get(key)
+        if meta is None:
+            out[key] = value
+            continue
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            pass
+        out[key] = {
+            "value": value,
+            "type": meta[0],
+            "format": meta[1],
+            "description": meta[2],
+            "group": "PiWeatherControl",
+            "source": "piweathercontrol",
+        }
+    return out
+
+
 def _atomic_write_json(path: Path, data: dict) -> None:
-    """Write JSON to ``path`` atomically.
+    """Write JSON to ``path`` atomically, typing known Allsky keys.
 
     Allsky's overlay loader and ``allsky_publishdata`` poll these files on
     every capture cycle. A plain ``Path.write_text`` truncates the file
@@ -365,7 +415,7 @@ def _atomic_write_json(path: Path, data: dict) -> None:
     previous full file or the new one.
     """
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=4) + "\n")
+    tmp.write_text(json.dumps(_typed_allsky(data), indent=4) + "\n")
     tmp.replace(path)
 
 
