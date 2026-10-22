@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional
@@ -580,6 +580,59 @@ async def get_status():
             "heater": config["heater"]["mode"],
         },
     }
+
+
+# Prometheus exposition. Hand-formatted text so no client library is needed.
+# (metric name, help text, getter over the sensor snapshot). A getter returning
+# None means the sensor had no reading; that metric line is omitted.
+_METRICS = [
+    ("ina260_voltage_volts", "INA260 bus voltage", lambda s: s.ina260.voltage),
+    ("ina260_current_amps", "INA260 current", lambda s: s.ina260.current),
+    ("ina260_power_watts", "INA260 power", lambda s: s.ina260.power),
+    ("bme280_temperature_celsius", "Enclosure temperature", lambda s: s.bme280.temperature),
+    ("bme280_humidity_percent", "Enclosure relative humidity", lambda s: s.bme280.humidity),
+    ("bme280_pressure_hpa", "Enclosure pressure", lambda s: s.bme280.pressure),
+    ("bme280_dew_point_celsius", "Enclosure dew point", lambda s: s.bme280.dew_point),
+    ("outdoor_temperature_celsius", "Outdoor temperature from Home Assistant", lambda s: s.outdoor.temperature),
+    ("outdoor_humidity_percent", "Outdoor relative humidity from Home Assistant", lambda s: s.outdoor.humidity),
+    ("outdoor_dew_point_celsius", "Outdoor dew point from Home Assistant", lambda s: s.outdoor.dew_point),
+    ("cpu_temperature_celsius", "Pi CPU temperature", lambda s: s.system.cpu),
+    ("ssd_temperature_celsius", "NVMe temperature", lambda s: s.system.ssd),
+    ("pi_fan_rpm", "Pi fan speed", lambda s: s.pi_fan.rpm),
+    ("pi_fan_pwm", "Pi fan PWM duty 0-255", lambda s: s.pi_fan.pwm),
+    ("pi_fan_speed_percent", "Pi fan speed percent", lambda s: s.pi_fan.speed_pct),
+    ("sensor_timestamp_seconds", "Unix time of the last sensor read", lambda s: s.timestamp),
+]
+
+
+@app.get("/metrics")
+async def metrics():
+    lines: list[str] = []
+    snap = latest_snapshot
+    if snap is not None:
+        for name, help_text, getter in _METRICS:
+            value = getter(snap)
+            if value is None:
+                continue
+            lines.append(f"# HELP piweathercontrol_{name} {help_text}")
+            lines.append(f"# TYPE piweathercontrol_{name} gauge")
+            lines.append(f"piweathercontrol_{name} {float(value)}")
+        lines.append("# HELP piweathercontrol_sensor_error 1 if the last read of this sensor failed")
+        lines.append("# TYPE piweathercontrol_sensor_error gauge")
+        for sensor in ("bme280", "ina260", "outdoor", "pi_fan"):
+            err = getattr(snap, sensor).error
+            lines.append(f'piweathercontrol_sensor_error{{sensor="{sensor}"}} {int(bool(err))}')
+    relays = gpio.status()
+    lines.append("# HELP piweathercontrol_relay_on 1 if the relay is energized")
+    lines.append("# TYPE piweathercontrol_relay_on gauge")
+    lines.append("# HELP piweathercontrol_relay_cycles_total Relay switch count since start")
+    lines.append("# TYPE piweathercontrol_relay_cycles_total counter")
+    for name, relay in relays.items():
+        if not isinstance(relay, dict):
+            continue
+        lines.append(f'piweathercontrol_relay_on{{relay="{name}"}} {int(bool(relay.get("is_on")))}')
+        lines.append(f'piweathercontrol_relay_cycles_total{{relay="{name}"}} {int(relay.get("cycle_count", 0))}')
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @app.get("/api/config")
