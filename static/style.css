@@ -921,13 +921,32 @@ circle.pin[tabindex="0"]:focus {
 .sensor-half-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center; /* not baseline: a pill in the row would shift the line height */
   column-gap: 8px;
   padding-right: 30px; /* clear of the icon */
 }
 
 .sensor-half .sensor-val {
   font-size: 1.25rem;
+}
+
+/* Layout must not depend on the values shown: the trend pill coming and going
+   used to change the row height and, at mid widths, wrap the row. The value
+   row has a fixed height and takes whatever width is left beside the label,
+   clipping instead of wrapping. Secondary readings always get their own line. */
+.sensor-half .sensor-value-row {
+  display: flex;
+  align-items: baseline;
+  column-gap: 4px;
+  height: 1.4rem;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sensor-half .sensor-metas {
+  flex-basis: 100%;
 }
 
 .sensor-half .sparkline {
