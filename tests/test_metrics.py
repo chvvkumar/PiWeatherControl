@@ -35,3 +35,20 @@ def test_metrics_before_first_sample(client, monkeypatch):
     assert r.status_code == 200
     assert "piweathercontrol_ina260" not in r.text
     assert "piweathercontrol_relay_on" in r.text
+
+
+def test_read_camera_temp(tmp_path):
+    import json, os, time
+    from sensors import read_camera_temp
+
+    f = tmp_path / "allsky_camera.json"
+    f.write_text(json.dumps({"AS_TEMPERATURE_C": {"value": 17.34}}))
+    assert read_camera_temp(str(f)) == 17.3
+
+    f.write_text("{ truncated")  # Allsky mid-write
+    assert read_camera_temp(str(f)) is None
+
+    f.write_text(json.dumps({"AS_TEMPERATURE_C": {"value": 17.34}}))
+    old = time.time() - 3600  # capture stopped
+    os.utime(f, (old, old))
+    assert read_camera_temp(str(f)) is None

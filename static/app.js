@@ -100,6 +100,11 @@ function updateSensors(s) {
   _updateTrendDelta('#cpu-delta', historyData, d => d.system?.cpu, cpu);
   _updateTrendDelta('#ssd-delta', historyData, d => d.system?.ssd, ssd);
 
+  const cam = s.system.camera;
+  $('#cam-temp').textContent = cam != null ? cam.toFixed(1) : '--';
+  $('#cam-temp').className = tempClass(cam);
+  _updateTrendDelta('#cam-delta', historyData, d => d.system?.camera, cam);
+
   if (s.bme280) {
     const b = s.bme280;
     $('#enc-temp').textContent = b.temperature != null ? b.temperature.toFixed(1) : '--';
@@ -244,6 +249,7 @@ function drawSparklines() {
   const slice = historyData.slice(-60);
   drawSparkline('#spark-cpu', slice.map(d => d.system?.cpu), '#58a6ff');
   drawSparkline('#spark-ssd', slice.map(d => d.system?.ssd), '#d29922');
+  drawSparkline('#spark-camera', slice.map(d => d.system?.camera), '#a855f7');
   drawSparkline('#spark-enclosure', slice.map(d => d.bme280?.temperature), '#3fb950');
 }
 

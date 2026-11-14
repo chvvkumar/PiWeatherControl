@@ -20,8 +20,9 @@
     <!-- ── Sensor Strip ── -->
     <section class="sensor-strip">
 
-      <!-- CPU -->
-      <div class="sensor-card" id="card-cpu">
+      <!-- CPU + SSD -->
+      <div class="sensor-card" id="card-cpu-ssd">
+       <div class="sensor-half" id="card-cpu">
         <div class="sensor-card-top">
           <span class="sensor-label">CPU</span>
           <span class="sensor-ico">
@@ -41,10 +42,8 @@
           <span id="cpu-delta" class="delta"></span>
         </div>
         <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
-      </div>
-
-      <!-- SSD -->
-      <div class="sensor-card" id="card-ssd">
+       </div>
+       <div class="sensor-half" id="card-ssd">
         <div class="sensor-card-top">
           <span class="sensor-label">SSD</span>
           <span class="sensor-ico">
@@ -61,6 +60,26 @@
           <span id="ssd-delta" class="delta"></span>
         </div>
         <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
+       </div>
+      </div>
+
+      <!-- Camera sensor -->
+      <div class="sensor-card" id="card-camera">
+        <div class="sensor-card-top">
+          <span class="sensor-label">Camera Sensor</span>
+          <span class="sensor-ico">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h3l2-3h6l2 3h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </span>
+        </div>
+        <div class="sensor-value-row">
+          <span class="sensor-val" id="cam-temp">--</span>
+          <span class="sensor-unit">&deg;C</span>
+          <span id="cam-delta" class="delta"></span>
+        </div>
+        <canvas id="spark-camera" class="sparkline" width="160" height="40"></canvas>
       </div>
 
       <!-- Pi Fan -->

@@ -598,6 +598,7 @@ _METRICS = [
     ("outdoor_dew_point_celsius", "Outdoor dew point from Home Assistant", lambda s: s.outdoor.dew_point),
     ("cpu_temperature_celsius", "Pi CPU temperature", lambda s: s.system.cpu),
     ("ssd_temperature_celsius", "NVMe temperature", lambda s: s.system.ssd),
+    ("camera_temperature_celsius", "Camera sensor temperature from Allsky", lambda s: s.system.camera),
     ("pi_fan_rpm", "Pi fan speed", lambda s: s.pi_fan.rpm),
     ("pi_fan_pwm", "Pi fan PWM duty 0-255", lambda s: s.pi_fan.pwm),
     ("pi_fan_speed_percent", "Pi fan speed percent", lambda s: s.pi_fan.speed_pct),

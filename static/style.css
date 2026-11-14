@@ -849,6 +849,27 @@ circle.pin[tabindex="0"]:focus {
   flex-shrink: 0;
 }
 
+/* Two readings stacked in one card (CPU over SSD) */
+.sensor-half {
+  position: relative;
+}
+
+.sensor-half + .sensor-half {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Icon is positioned against the half, not the card: cancel the card padding */
+.sensor-half .sensor-ico {
+  top: -4px;
+  right: -4px;
+}
+
+.sensor-half + .sensor-half .sensor-ico {
+  top: 8px;
+}
+
 .sensor-ico svg {
   width: 16px;
   height: 16px;

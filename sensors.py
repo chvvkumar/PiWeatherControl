@@ -4,7 +4,9 @@ On non-Linux platforms (Windows dev), returns mock data.
 """
 
 import glob
+import json
 import math
+import os
 import time
 import logging
 from dataclasses import dataclass, field, asdict
@@ -56,6 +58,7 @@ class INA260Reading:
 class SystemTemps:
     cpu: Optional[float] = None           # °C
     ssd: Optional[float] = None           # °C
+    camera: Optional[float] = None        # °C, camera image sensor via Allsky
 
 
 @dataclass
@@ -208,7 +211,30 @@ def read_system_temps() -> SystemTemps:
     except (FileNotFoundError, IOError):
         ssd = round(33.0 + 3.0 * math.sin(time.time() / 120), 1)
 
-    return SystemTemps(cpu=cpu, ssd=ssd)
+    return SystemTemps(cpu=cpu, ssd=ssd, camera=read_camera_temp())
+
+
+# Allsky rewrites this file on every captured frame.
+_CAMERA_JSON = "/home/pi/allsky/tmp/extra/allsky_camera.json"
+_CAMERA_MAX_AGE_S = 600  # older than this means capture has stopped
+
+
+def read_camera_temp(path: str = _CAMERA_JSON) -> Optional[float]:
+    """Read the camera sensor temperature Allsky records per frame.
+
+    Returns None when the file is missing, stale, mid-write or has no value.
+    """
+    try:
+        if time.time() - os.path.getmtime(path) > _CAMERA_MAX_AGE_S:
+            return None
+        with open(path) as f:
+            return round(float(json.load(f)["AS_TEMPERATURE_C"]["value"]), 1)
+    except FileNotFoundError:
+        if not _HW_AVAILABLE:  # mock on Windows dev
+            return round(18.0 + 2.0 * math.sin(time.time() / 150), 1)
+        return None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
 
 
 def _find_pwmfan_hwmon() -> Optional[str]:
