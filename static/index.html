@@ -109,8 +109,9 @@
         <canvas id="pi-fan-curve" class="sparkline" width="160" height="40"></canvas>
       </div>
 
-      <!-- Enclosure -->
-      <div class="sensor-card" id="card-enclosure">
+      <!-- Enclosure + Outside -->
+      <div class="sensor-card" id="card-enc-out">
+       <div class="sensor-half" id="card-enclosure">
         <div class="sensor-card-top">
           <span class="sensor-label">Enclosure</span>
           <span class="sensor-ico">
@@ -141,10 +142,8 @@
         </div>
         </div>
         <canvas id="spark-enclosure" class="sparkline" width="160" height="40"></canvas>
-      </div>
-
-      <!-- Outside (HA) -->
-      <div class="sensor-card" id="card-outdoor">
+       </div>
+       <div class="sensor-half" id="card-outdoor">
         <div class="sensor-card-top">
           <span class="sensor-label">Outside (HA)</span>
           <span class="sensor-ico">
@@ -159,10 +158,6 @@
         </div>
         <div class="sensor-metas">
         <div class="sensor-meta">
-          <span class="sensor-meta-label">Status</span>
-          <span id="ha-status" class="badge">--</span>
-        </div>
-        <div class="sensor-meta">
           <span class="sensor-meta-label">RH</span>
           <span class="sensor-meta-val" id="out-humidity">--</span>
           <span class="sensor-meta-unit">%</span>
@@ -172,7 +167,13 @@
           <span class="sensor-meta-val" id="out-dew">--</span>
           <span class="sensor-meta-unit">&deg;C</span>
         </div>
+        <div class="sensor-meta">
+          <span class="sensor-meta-label">Status</span>
+          <span id="ha-status" class="badge">--</span>
         </div>
+        </div>
+        <canvas id="spark-outdoor" class="sparkline" width="160" height="40"></canvas>
+       </div>
       </div>
 
       <!-- Power -->
@@ -201,6 +202,7 @@
           <span class="sensor-meta-unit">W</span>
         </div>
         </div>
+        <canvas id="spark-power" class="sparkline" width="160" height="40"></canvas>
       </div>
 
     </section>

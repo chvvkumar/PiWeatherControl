@@ -251,6 +251,8 @@ function drawSparklines() {
   drawSparkline('#spark-ssd', slice.map(d => d.system?.ssd), '#d29922');
   drawSparkline('#spark-camera', slice.map(d => d.system?.camera), '#a855f7');
   drawSparkline('#spark-enclosure', slice.map(d => d.bme280?.temperature), '#3fb950');
+  drawSparkline('#spark-outdoor', slice.map(d => d.outdoor?.temperature), '#38bdf8');
+  drawSparkline('#spark-power', slice.map(d => d.ina260?.power), '#f59e0b');
 }
 
 // ── Dew Status Gauge ─────────────────────────────────────────────

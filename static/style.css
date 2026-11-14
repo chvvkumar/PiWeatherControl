@@ -814,7 +814,7 @@ circle.pin[tabindex="0"]:focus {
 /* ===== Sensor strip (Variant 2) ===== */
 .sensor-strip {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -883,6 +883,15 @@ circle.pin[tabindex="0"]:focus {
 .sensor-half .sparkline {
   height: 28px;
   margin-top: 4px;
+}
+
+/* Secondary readings follow the value on the same line, clear of the icon */
+.sensor-half .sensor-metas {
+  margin: 0 30px 0 0;
+}
+
+.sensor-half .sensor-meta {
+  margin-top: 0;
 }
 
 .sensor-half + .sensor-half {
