@@ -61,7 +61,24 @@ async function fetchHistory() {
   if (data) {
     historyData = data;
     drawSparklines();
+    updateMinMax();
   }
+}
+
+// Fill every [data-minmax="a.b"] element with the low and high of that
+// reading over the server's history buffer (about 2 h, cleared on restart).
+function updateMinMax() {
+  $$('[data-minmax]').forEach(el => {
+    const keys = el.dataset.minmax.split('.');
+    const vals = historyData
+      .map(d => keys.reduce((o, k) => o?.[k], d))
+      .filter(v => v != null);
+    const dp = Number(el.dataset.dp ?? 1);
+    el.textContent = vals.length
+      ? `↓${Math.min(...vals).toFixed(dp)} ↑${Math.max(...vals).toFixed(dp)}`
+      : '';
+    el.title = 'Min / max over the last 2 h';
+  });
 }
 
 async function fetchEvents() {

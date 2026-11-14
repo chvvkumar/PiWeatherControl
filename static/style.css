@@ -905,6 +905,15 @@ circle.pin[tabindex="0"]:focus {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Low / high of a reading over the history buffer */
+.minmax {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Power card: one labelled bar per reading, spread over the card height */
 .power-bars {
   flex: 1;

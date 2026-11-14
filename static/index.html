@@ -41,6 +41,7 @@
           <span class="sensor-val" id="cpu-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="cpu-delta" class="delta"></span>
+          <span class="minmax" data-minmax="system.cpu" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
@@ -61,6 +62,7 @@
           <span class="sensor-val" id="ssd-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="ssd-delta" class="delta"></span>
+          <span class="minmax" data-minmax="system.ssd" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
@@ -80,6 +82,7 @@
           <span class="sensor-val" id="cam-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="cam-delta" class="delta"></span>
+          <span class="minmax" data-minmax="system.camera" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-camera" class="sparkline" width="160" height="40"></canvas>
@@ -103,6 +106,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="pi-fan-rpm">--</span>
           <span class="sensor-unit">RPM</span>
+          <span class="minmax" data-minmax="pi_fan.rpm" data-dp="0"></span>
         </div>
         <div class="sensor-meta">
           <span class="sensor-meta-label">PWM</span>
@@ -129,6 +133,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="enc-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
+          <span class="minmax" data-minmax="bme280.temperature" data-dp="1"></span>
         </div>
         <div class="sensor-metas">
         <div class="sensor-meta">
@@ -162,6 +167,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="out-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
+          <span class="minmax" data-minmax="outdoor.temperature" data-dp="1"></span>
         </div>
         <div class="sensor-metas">
         <div class="sensor-meta">
@@ -196,17 +202,17 @@
         </div>
         <div class="power-bars">
           <div class="power-row">
-            <span class="power-name">Voltage</span>
+            <span class="power-name">Voltage <span class="minmax" data-minmax="ina260.voltage" data-dp="2"></span></span>
             <span class="power-val"><span id="pwr-voltage">--</span><span class="sensor-unit">V</span></span>
             <div class="pwm-bar"><span id="pwr-voltage-bar"></span></div>
           </div>
           <div class="power-row">
-            <span class="power-name">Current</span>
+            <span class="power-name">Current <span class="minmax" data-minmax="ina260.current" data-dp="2"></span></span>
             <span class="power-val"><span id="pwr-current">--</span><span class="sensor-unit">A</span></span>
             <div class="pwm-bar"><span id="pwr-current-bar" style="background: var(--green)"></span></div>
           </div>
           <div class="power-row">
-            <span class="power-name">Power</span>
+            <span class="power-name">Power <span class="minmax" data-minmax="ina260.power" data-dp="1"></span></span>
             <span class="power-val"><span id="pwr-power">--</span><span class="sensor-unit">W</span></span>
             <div class="pwm-bar"><span id="pwr-power-bar" style="background: var(--orange)"></span></div>
           </div>
