@@ -814,7 +814,7 @@ circle.pin[tabindex="0"]:focus {
 /* ===== Sensor strip (Variant 2) ===== */
 .sensor-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -849,14 +849,16 @@ circle.pin[tabindex="0"]:focus {
   flex-shrink: 0;
 }
 
-/* Cards stretch to the tallest in the row: pin each graph to the bottom */
+/* Cards stretch to the tallest in the row; graphs take the spare height */
 .sensor-card {
   display: flex;
   flex-direction: column;
 }
 
 .sensor-card > .sparkline {
-  margin-top: auto;
+  flex: 1 1 0;
+  height: auto;
+  min-height: 40px;
 }
 
 /* Secondary readings share one wrapping row instead of a line each */
@@ -864,16 +866,22 @@ circle.pin[tabindex="0"]:focus {
   display: flex;
   flex-wrap: wrap;
   column-gap: 12px;
-  margin-bottom: 8px;
 }
 
-/* Two readings stacked in one card (CPU over SSD): label and value share a line */
+/* Several readings stacked in one card: text on one line, graph below it */
 .sensor-half {
   position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-half-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: 8px;
+  padding-right: 30px; /* clear of the icon */
 }
 
 .sensor-half .sensor-val {
@@ -881,13 +889,10 @@ circle.pin[tabindex="0"]:focus {
 }
 
 .sensor-half .sparkline {
-  height: 28px;
+  flex: 1 1 0;
+  height: auto;
+  min-height: 28px;
   margin-top: 4px;
-}
-
-/* Secondary readings follow the value on the same line, clear of the icon */
-.sensor-half .sensor-metas {
-  margin: 0 30px 0 0;
 }
 
 .sensor-half .sensor-meta {
@@ -898,6 +903,38 @@ circle.pin[tabindex="0"]:focus {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Power card: one labelled bar per reading, spread over the card height */
+.power-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+
+.power-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.power-name {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+.power-val {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.power-row .pwm-bar {
+  flex-basis: 100%;
+  height: 6px;
+  margin-top: 4px;
 }
 
 /* Icon is positioned against the half, not the card: cancel the card padding */

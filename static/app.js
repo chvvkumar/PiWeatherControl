@@ -86,6 +86,10 @@ async function fetchEvents() {
 }
 
 // ── Sensor display ───────────────────────────────────────────────
+// Power card bar full-scale [empty, full]. Tune to the supply and load:
+// voltage is centred on a 12 V rail, current and power start at zero.
+const POWER_BAR_RANGE = { voltage: [10, 14], current: [0, 2], power: [0, 24] };
+
 function updateSensors(s) {
   if (!s || !s.system) return;
 
@@ -134,6 +138,11 @@ function updateSensors(s) {
     $('#pwr-voltage').textContent = p.voltage != null ? p.voltage.toFixed(2) : '--';
     $('#pwr-current').textContent = p.current != null ? p.current.toFixed(3) : '--';
     $('#pwr-power').textContent = p.power != null ? p.power.toFixed(1) : '--';
+    for (const [key, [lo, hi]] of Object.entries(POWER_BAR_RANGE)) {
+      const v = p[key];
+      const pct = v != null ? Math.min(100, Math.max(0, (v - lo) / (hi - lo) * 100)) : 0;
+      $(`#pwr-${key}-bar`).style.width = `${pct}%`;
+    }
   }
 
   if (s.pi_fan) {
@@ -252,7 +261,6 @@ function drawSparklines() {
   drawSparkline('#spark-camera', slice.map(d => d.system?.camera), '#a855f7');
   drawSparkline('#spark-enclosure', slice.map(d => d.bme280?.temperature), '#3fb950');
   drawSparkline('#spark-outdoor', slice.map(d => d.outdoor?.temperature), '#38bdf8');
-  drawSparkline('#spark-power', slice.map(d => d.ina260?.power), '#f59e0b');
 }
 
 // ── Dew Status Gauge ─────────────────────────────────────────────
@@ -542,7 +550,7 @@ function drawPiFanCurve(fan, cpuTemp) {
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   const cw = canvas.clientWidth || canvas.parentElement.clientWidth;
-  const ch = 40;
+  const ch = canvas.clientHeight || 40;
   canvas.width = cw * dpr;
   canvas.height = ch * dpr;
   const ctx = canvas.getContext('2d');
