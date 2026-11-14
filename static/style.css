@@ -849,14 +849,45 @@ circle.pin[tabindex="0"]:focus {
   flex-shrink: 0;
 }
 
-/* Two readings stacked in one card (CPU over SSD) */
+/* Cards stretch to the tallest in the row: pin each graph to the bottom */
+.sensor-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-card > .sparkline {
+  margin-top: auto;
+}
+
+/* Secondary readings share one wrapping row instead of a line each */
+.sensor-metas {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  margin-bottom: 8px;
+}
+
+/* Two readings stacked in one card (CPU over SSD): label and value share a line */
 .sensor-half {
   position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+}
+
+.sensor-half .sensor-val {
+  font-size: 1.25rem;
+}
+
+.sensor-half .sparkline {
+  height: 28px;
+  margin-top: 4px;
 }
 
 .sensor-half + .sensor-half {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -867,7 +898,7 @@ circle.pin[tabindex="0"]:focus {
 }
 
 .sensor-half + .sensor-half .sensor-ico {
-  top: 8px;
+  top: 4px;
 }
 
 .sensor-ico svg {

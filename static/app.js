@@ -218,7 +218,7 @@ function drawSparkline(canvasId, values, color = '#58a6ff') {
   if (!canvas || values.length < 2) return;
   const ctx = canvas.getContext('2d');
   const w = canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
-  const h = canvas.height = 40 * (window.devicePixelRatio || 1);
+  const h = canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
   ctx.clearRect(0, 0, w, h);
 
   const valid = values.filter(v => v != null);
