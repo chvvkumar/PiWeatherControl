@@ -13,6 +13,18 @@
   <header>
     <h1>Enclosure Controller</h1>
     <span id="connection-status" class="status-dot connected" title="Connected"></span>
+    <div class="range-selector" role="group" aria-label="Min / max range">
+      <span class="range-label">Min / max</span>
+      <button type="button" class="range-btn" data-range="1h" title="Last hour">1h</button>
+      <button type="button" class="range-btn" data-range="6h" title="Last 6 hours">6h</button>
+      <button type="button" class="range-btn" data-range="12h" title="Last 12 hours">12h</button>
+      <button type="button" class="range-btn" data-range="24h" title="Last 24 hours">24h</button>
+      <button type="button" class="range-btn" data-range="7d" title="Last 7 days">7d</button>
+      <button type="button" class="range-btn" data-range="1mo" title="Last month">1mo</button>
+      <button type="button" class="range-btn" data-range="6mo" title="Last 6 months">6mo</button>
+      <button type="button" class="range-btn" data-range="1y" title="Last year">1y</button>
+      <button type="button" class="range-btn" data-range="all" title="All time">All</button>
+    </div>
   </header>
 
   <main>
@@ -41,7 +53,7 @@
           <span class="sensor-val" id="cpu-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="cpu-delta" class="delta"></span>
-          <span class="minmax" data-minmax="system.cpu" data-dp="1"></span>
+          <span class="minmax" data-minmax="cpu_temperature_celsius" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-cpu" class="sparkline" width="160" height="40"></canvas>
@@ -62,7 +74,7 @@
           <span class="sensor-val" id="ssd-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="ssd-delta" class="delta"></span>
-          <span class="minmax" data-minmax="system.ssd" data-dp="1"></span>
+          <span class="minmax" data-minmax="ssd_temperature_celsius" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-ssd" class="sparkline" width="160" height="40"></canvas>
@@ -82,7 +94,7 @@
           <span class="sensor-val" id="cam-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
           <span id="cam-delta" class="delta"></span>
-          <span class="minmax" data-minmax="system.camera" data-dp="1"></span>
+          <span class="minmax" data-minmax="camera_temperature_celsius" data-dp="1"></span>
         </div>
         </div>
         <canvas id="spark-camera" class="sparkline" width="160" height="40"></canvas>
@@ -106,7 +118,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="pi-fan-rpm">--</span>
           <span class="sensor-unit">RPM</span>
-          <span class="minmax" data-minmax="pi_fan.rpm" data-dp="0"></span>
+          <span class="minmax" data-minmax="pi_fan_rpm" data-dp="0"></span>
         </div>
         <div class="sensor-meta">
           <span class="sensor-meta-label">PWM</span>
@@ -133,7 +145,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="enc-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
-          <span class="minmax" data-minmax="bme280.temperature" data-dp="1"></span>
+          <span class="minmax" data-minmax="bme280_temperature_celsius" data-dp="1"></span>
         </div>
         <div class="sensor-metas">
         <div class="sensor-meta">
@@ -167,7 +179,7 @@
         <div class="sensor-value-row">
           <span class="sensor-val" id="out-temp">--</span>
           <span class="sensor-unit">&deg;C</span>
-          <span class="minmax" data-minmax="outdoor.temperature" data-dp="1"></span>
+          <span class="minmax" data-minmax="outdoor_temperature_celsius" data-dp="1"></span>
         </div>
         <div class="sensor-metas">
         <div class="sensor-meta">
@@ -202,17 +214,17 @@
         </div>
         <div class="power-bars">
           <div class="power-row">
-            <span class="power-name">Voltage <span class="minmax" data-minmax="ina260.voltage" data-dp="2"></span></span>
+            <span class="power-name">Voltage <span class="minmax" data-minmax="ina260_voltage_volts" data-dp="2"></span></span>
             <span class="power-val"><span id="pwr-voltage">--</span><span class="sensor-unit">V</span></span>
             <div class="pwm-bar"><span id="pwr-voltage-bar"></span></div>
           </div>
           <div class="power-row">
-            <span class="power-name">Current <span class="minmax" data-minmax="ina260.current" data-dp="2"></span></span>
+            <span class="power-name">Current <span class="minmax" data-minmax="ina260_current_amps" data-dp="2"></span></span>
             <span class="power-val"><span id="pwr-current">--</span><span class="sensor-unit">A</span></span>
             <div class="pwm-bar"><span id="pwr-current-bar" style="background: var(--green)"></span></div>
           </div>
           <div class="power-row">
-            <span class="power-name">Power <span class="minmax" data-minmax="ina260.power" data-dp="1"></span></span>
+            <span class="power-name">Power <span class="minmax" data-minmax="ina260_power_watts" data-dp="1"></span></span>
             <span class="power-val"><span id="pwr-power">--</span><span class="sensor-unit">W</span></span>
             <div class="pwm-bar"><span id="pwr-power-bar" style="background: var(--orange)"></span></div>
           </div>

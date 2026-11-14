@@ -61,24 +61,46 @@ async function fetchHistory() {
   if (data) {
     historyData = data;
     drawSparklines();
-    updateMinMax();
+    fetchMinMax();
   }
 }
 
-// Fill every [data-minmax="a.b"] element with the low and high of that
-// reading over the server's history buffer (about 2 h, cleared on restart).
-function updateMinMax() {
+// ── Min / max over a selectable range ────────────────────────────
+// The server keeps these on disk; the header buttons pick the range.
+let minmaxRange = '24h';
+
+// Fill every [data-minmax="<metric name>"] element with that reading's low
+// and high over the selected range.
+async function fetchMinMax() {
+  const range = minmaxRange;
+  const data = await api(`/api/minmax?range=${encodeURIComponent(range)}`);
+  if (!data || range !== minmaxRange) return;  // failed, or range changed meanwhile
+  const label = $(`.range-btn[data-range="${range}"]`)?.title ?? range;
   $$('[data-minmax]').forEach(el => {
-    const keys = el.dataset.minmax.split('.');
-    const vals = historyData
-      .map(d => keys.reduce((o, k) => o?.[k], d))
-      .filter(v => v != null);
+    const mm = data.values[el.dataset.minmax];
     const dp = Number(el.dataset.dp ?? 1);
-    el.textContent = vals.length
-      ? `↓${Math.min(...vals).toFixed(dp)} ↑${Math.max(...vals).toFixed(dp)}`
-      : '';
-    el.title = 'Min / max over the last 2 h';
+    el.textContent = mm ? `↓${mm[0].toFixed(dp)} ↑${mm[1].toFixed(dp)}` : '';
+    el.title = `Min / max, ${label.toLowerCase()}`;
   });
+}
+
+function initRangeSelector() {
+  const btns = [...$$('.range-btn')];
+  let saved = null;
+  try { saved = localStorage.getItem('minmaxRange'); } catch (e) { /* storage blocked */ }
+  if (btns.some(b => b.dataset.range === saved)) minmaxRange = saved;
+  const mark = () => btns.forEach(b => {
+    const on = b.dataset.range === minmaxRange;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on);
+  });
+  btns.forEach(b => b.addEventListener('click', () => {
+    minmaxRange = b.dataset.range;
+    try { localStorage.setItem('minmaxRange', minmaxRange); } catch (e) { /* storage blocked */ }
+    mark();
+    fetchMinMax();
+  }));
+  mark();
 }
 
 async function fetchEvents() {
@@ -1229,6 +1251,7 @@ async function init() {
   // Settings are on the page at load time — populate and wire immediately
   await _initSettingsOnLoad();
 
+  initRangeSelector();  // before the first history fetch, which loads min/max
   await fetchStatus();
   await fetchHistory();
   await fetchEvents();

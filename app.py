@@ -22,6 +22,7 @@ from config import load_config, update_config, save_config
 from sensors import read_all_sensors, init_i2c_sensors, SensorSnapshot
 from gpio_control import GPIOController
 import gps_reader
+import minmax
 import pi_pinout
 
 # ---------------------------------------------------------------------------
@@ -46,6 +47,9 @@ gpio = GPIOController(
 
 # Ring buffer for history: ~2 hours at 10s intervals
 history: collections.deque = collections.deque(maxlen=720)
+
+# Long-term min/max per reading, survives restarts
+minmax_store = minmax.MinMaxStore(Path(__file__).parent / "minmax.db")
 
 # Event log: last 100 control decisions
 event_log: collections.deque = collections.deque(maxlen=100)
@@ -528,6 +532,15 @@ async def control_loop() -> None:
 
         except Exception as e:
             log.error(f"Control loop error: {e}", exc_info=True)
+        else:
+            # Statistics only: a storage failure must never disturb control.
+            try:
+                minmax_store.record({
+                    name: getter(snapshot)
+                    for name, _, getter in _METRICS if name not in _MINMAX_SKIP
+                })
+            except Exception as e:
+                log.warning(f"Min/max record failed: {e}")
 
         await asyncio.sleep(config.get("poll_interval", 10))
 
@@ -548,6 +561,10 @@ async def lifespan(app: FastAPI):
     task.cancel()
     gps_task.cancel()
     _save_gps_stats()
+    try:
+        minmax_store.flush()
+    except Exception as e:
+        log.warning(f"Min/max flush failed: {e}")
     gpio.cleanup()
     _log_event("Enclosure controller stopped")
 
@@ -604,6 +621,19 @@ _METRICS = [
     ("pi_fan_speed_percent", "Pi fan speed percent", lambda s: s.pi_fan.speed_pct),
     ("sensor_timestamp_seconds", "Unix time of the last sensor read", lambda s: s.timestamp),
 ]
+
+
+_MINMAX_SKIP = {"sensor_timestamp_seconds"}
+
+
+@app.get("/api/minmax")
+async def get_minmax(range: str = "24h"):
+    """Min and max of every reading over a named range, keyed by metric name."""
+    if range not in minmax.RANGES:
+        return JSONResponse(
+            {"error": f"range must be one of {list(minmax.RANGES)}"}, status_code=400
+        )
+    return {"range": range, "values": minmax_store.query(range)}
 
 
 @app.get("/metrics")

@@ -26,3 +26,7 @@ Thumbs.db
 
 # Runtime GPS stats persistence
 gps_stats.json
+
+# Runtime sensor min/max persistence
+minmax.db
+minmax.db-journal
